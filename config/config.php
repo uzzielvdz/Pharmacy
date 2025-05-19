@@ -1,4 +1,4 @@
 <?php
 define('ROOT_PATH', dirname(__DIR__));
-define('BASE_URL', '/Pharmacy');
-?> 
+define('BASE_URL', 'http://localhost/Pharmacy');
+?>

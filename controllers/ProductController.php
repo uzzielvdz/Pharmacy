@@ -1,5 +1,5 @@
 <?php
-require_once '../models/Product.php';
+require_once dirname(__DIR__) . '/models/Product.php';
 
 class ProductController {
     private $productModel;
@@ -10,72 +10,109 @@ class ProductController {
 
     public function index() {
         $products = $this->productModel->getAll();
-        require '../views/products/index.php';
+        require_once dirname(__DIR__) . '/views/products/index.php';
     }
 
     public function create() {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $data = [
-                'nombre' => filter_input(INPUT_POST, 'nombre', FILTER_SANITIZE_STRING),
-                'descripcion' => filter_input(INPUT_POST, 'descripcion', FILTER_SANITIZE_STRING),
-                'stock' => filter_input(INPUT_POST, 'stock', FILTER_SANITIZE_NUMBER_INT),
-                'precio' => filter_input(INPUT_POST, 'precio', FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION),
-                'fecha_caducidad' => filter_input(INPUT_POST, 'fecha_caducidad', FILTER_SANITIZE_STRING),
-                'id_proveedor' => filter_input(INPUT_POST, 'id_proveedor', FILTER_SANITIZE_NUMBER_INT)
-            ];
+        $proveedores = $this->productModel->getProveedores();
+        require_once dirname(__DIR__) . '/views/products/create.php';
+    }
+
+    public function store() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo "Método no permitido.";
+            return;
+        }
+
+        $data = [
+            'nombre' => trim($_POST['nombre'] ?? ''),
+            'descripcion' => trim($_POST['descripcion'] ?? ''),
+            'precio' => filter_var($_POST['precio'] ?? 0, FILTER_VALIDATE_FLOAT),
+            'fecha_caducidad' => trim($_POST['fecha_caducidad'] ?? ''),
+            'lote' => trim($_POST['lote'] ?? ''),
+            'stock' => filter_var($_POST['stock'] ?? 0, FILTER_VALIDATE_INT),
+            'id_proveedor' => filter_var($_POST['id_proveedor'] ?? 0, FILTER_VALIDATE_INT)
+        ];
+
+        if (empty($data['nombre']) || $data['precio'] === false || empty($data['fecha_caducidad']) || 
+            empty($data['lote']) || $data['stock'] === false || $data['id_proveedor'] === false) {
+            echo "Error: Todos los campos obligatorios deben ser válidos.";
+            return;
+        }
+
+        try {
             if ($this->productModel->create($data)) {
-                header('Location: ' . BASE_URL . '/public/');
+                header('Location: ' . BASE_URL . '/public/index.php');
                 exit;
             } else {
-                $error = "Error al crear el producto.";
+                echo "Error al crear el producto. Verifica los datos.";
             }
+        } catch (Exception $e) {
+            echo "Error: " . htmlspecialchars($e->getMessage());
         }
-        $proveedores = $this->getProveedores();
-        require '../views/products/create.php';
     }
 
     public function edit($id) {
-        $id = filter_var($id, FILTER_VALIDATE_INT);
-        if (!$id) {
-            header('Location: ' . BASE_URL . '/public/');
-            exit;
+        $product = $this->productModel->getById($id);
+        $proveedores = $this->productModel->getProveedores();
+        if ($product) {
+            require_once dirname(__DIR__) . '/views/products/edit.php';
+        } else {
+            echo "Producto no encontrado.";
         }
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $data = [
-                'nombre' => filter_input(INPUT_POST, 'nombre', FILTER_SANITIZE_STRING),
-                'descripcion' => filter_input(INPUT_POST, 'descripcion', FILTER_SANITIZE_STRING),
-                'stock' => filter_input(INPUT_POST, 'stock', FILTER_SANITIZE_NUMBER_INT),
-                'precio' => filter_input(INPUT_POST, 'precio', FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION),
-                'fecha_caducidad' => filter_input(INPUT_POST, 'fecha_caducidad', FILTER_SANITIZE_STRING),
-                'id_proveedor' => filter_input(INPUT_POST, 'id_proveedor', FILTER_SANITIZE_NUMBER_INT)
-            ];
+    }
+
+    public function update() {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['id'])) {
+            echo "Método no permitido o ID no proporcionado.";
+            return;
+        }
+
+        $id = filter_var($_POST['id'], FILTER_VALIDATE_INT);
+        if ($id === false) {
+            echo "Error: ID inválido.";
+            return;
+        }
+
+        $data = [
+            'nombre' => trim($_POST['nombre'] ?? ''),
+            'descripcion' => trim($_POST['descripcion'] ?? ''),
+            'precio' => filter_var($_POST['precio'] ?? 0, FILTER_VALIDATE_FLOAT),
+            'fecha_caducidad' => trim($_POST['fecha_caducidad'] ?? ''),
+            'lote' => trim($_POST['lote'] ?? ''),
+            'stock' => filter_var($_POST['stock'] ?? 0, FILTER_VALIDATE_INT),
+            'id_proveedor' => filter_var($_POST['id_proveedor'] ?? 0, FILTER_VALIDATE_INT)
+        ];
+
+        if (empty($data['nombre']) || $data['precio'] === false || empty($data['fecha_caducidad']) || 
+            empty($data['lote']) || $data['stock'] === false || $data['id_proveedor'] === false) {
+            echo "Error: Todos los campos obligatorios deben ser válidos.";
+            return;
+        }
+
+        try {
             if ($this->productModel->update($id, $data)) {
-                header('Location: ' . BASE_URL . '/public/');
+                header('Location: ' . BASE_URL . '/public/index.php');
                 exit;
             } else {
-                $error = "Error al actualizar el producto.";
+                echo "Error al actualizar el producto. Verifica los datos.";
             }
+        } catch (Exception $e) {
+            echo "Error: " . htmlspecialchars($e->getMessage());
         }
-        $product = $this->productModel->getById($id);
-        $proveedores = $this->getProveedores();
-        require '../views/products/edit.php';
     }
 
     public function delete($id) {
-        $id = filter_var($id, FILTER_VALIDATE_INT);
-        if ($id && $this->productModel->delete($id)) {
-            header('Location: ' . BASE_URL . '/public/');
-            exit;
-        } else {
-            $error = "Error al eliminar el producto.";
-            require '../views/products/index.php';
+        try {
+            if ($this->productModel->delete($id)) {
+                header('Location: ' . BASE_URL . '/public/index.php');
+                exit;
+            } else {
+                echo "Error al eliminar el producto.";
+            }
+        } catch (Exception $e) {
+            echo "Error: " . htmlspecialchars($e->getMessage());
         }
-    }
-
-    private function getProveedores() {
-        $sql = "SELECT id_proveedor, nombre FROM Proveedores";
-        $result = $this->productModel->conn->query($sql);
-        return $result->fetch_all(MYSQLI_ASSOC);
     }
 }
 ?>

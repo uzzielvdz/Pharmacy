@@ -1,10 +1,12 @@
-<?php include '../layouts/header.php'; ?>
+<?php include dirname(__DIR__) . '/layouts/header.php'; ?>
 <h2>Lista de Productos</h2>
-<a href="?action=create">Crear Nuevo Producto</a>
+<a href="<?php echo BASE_URL; ?>/public/index.php?controller=proveedor&action=index">Gestionar Proveedores</a><br>
+<a href="<?php echo BASE_URL; ?>/public/index.php?controller=movimiento&action=index">Gestionar Movimientos</a><br><br>
+<a href="<?php echo BASE_URL; ?>/public/index.php?controller=product&action=create">Crear Nuevo Producto</a>
 <?php if (empty($products)): ?>
     <p>No hay productos registrados.</p>
 <?php else: ?>
-    <table>
+    <table border="1">
         <thead>
             <tr>
                 <th>ID</th>
@@ -13,7 +15,6 @@
                 <th>Stock</th>
                 <th>Precio</th>
                 <th>Fecha de Caducidad</th>
-                <th>Lote</th>
                 <th>Proveedor</th>
                 <th>Acciones</th>
             </tr>
@@ -25,17 +26,16 @@
                     <td><?php echo htmlspecialchars($product['nombre']); ?></td>
                     <td><?php echo htmlspecialchars($product['descripcion'] ?? 'Sin descripción'); ?></td>
                     <td><?php echo htmlspecialchars($product['stock']); ?></td>
-                    <td><?php echo htmlspecialchars($product['precio'] ?? '0.00'); ?></td>
+                    <td><?php echo htmlspecialchars($product['precio']); ?></td>
                     <td><?php echo htmlspecialchars($product['fecha_caducidad'] ?? 'N/A'); ?></td>
-                    <td><?php echo htmlspecialchars($product['lote'] ?? 'N/A'); ?></td>
                     <td><?php echo htmlspecialchars($product['proveedor'] ?? 'Sin proveedor'); ?></td>
                     <td>
-                        <a href="?action=edit&id=<?php echo $product['id_producto']; ?>">Editar</a>
-                        <a href="?action=delete&id=<?php echo $product['id_producto']; ?>" onclick="return confirm('¿Estás seguro?');">Eliminar</a>
+                        <a href="<?php echo BASE_URL; ?>/public/index.php?controller=product&action=edit&id=<?php echo $product['id_producto']; ?>">Editar</a>
+                        <a href="<?php echo BASE_URL; ?>/public/index.php?controller=product&action=delete&id=<?php echo $product['id_producto']; ?>" onclick="return confirm('¿Estás seguro?');">Eliminar</a>
                     </td>
                 </tr>
             <?php endforeach; ?>
         </tbody>
     </table>
 <?php endif; ?>
-<?php include '../layouts/footer.php'; ?>
+<?php include dirname(__DIR__) . '/layouts/footer.php'; ?>

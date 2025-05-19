@@ -1,20 +1,13 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Sistema de Gestión de Farmacia</title>
-    <link rel="stylesheet" href="/farmacia/public/assets/css/styles.css">
-</head>
-<body>
-    <header>
-        <h1>Sistema de Gestión de Inventario</h1>
-        <nav>
-            <a href="/farmacia/public/">Productos</a>
-            <a href="#">Órdenes</a>
-            <a href="#">Stock</a>
-            <a href="#">Usuarios</a>
-        </nav>
-    </header>
-    <main>
-
-    
+<style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    a { color: #007bff; text-decoration: none; margin-right: 10px; }
+    a:hover { text-decoration: underline; }
+    form { max-width: 600px; margin-top: 20px; }
+    label { display: block; margin: 10px 0 5px; }
+    input, textarea, select { width: 100%; padding: 8px; margin-bottom: 10px; }
+    input[type="submit"] { background-color: #007bff; color: white; border: none; padding: 10px; cursor: pointer; }
+    input[type="submit"]:hover { background-color: #0056b3; }
+</style>
