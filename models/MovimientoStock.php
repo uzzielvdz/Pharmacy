@@ -87,7 +87,7 @@ class MovimientoStock {
         $sql = "SELECT id_producto, nombre FROM Productos";
         $result = $this->conn->query($sql);
         if (!$result) {
-            throw new Exception("No se pudo obtener la lista de productos: " . $this->conn->error);
+            throw new Exception("No se pudo obtener la lista de productos. Error: " . $this->conn->error);
         }
         return $result->fetch_all(MYSQLI_ASSOC);
     }
