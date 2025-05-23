@@ -13,6 +13,7 @@ class ProductController {
 
     public function index() {
         $products = $this->productModel->getAll();
+        $errors = $_REQUEST['errors'] ?? [];
         require_once dirname(__DIR__) . '/views/products/index.php';
     }
 
@@ -82,6 +83,12 @@ class ProductController {
     }
 
     public function edit($id) {
+        if (!filter_var($id, FILTER_VALIDATE_INT) || $id <= 0) {
+            $errors = ['ID de producto no válido.'];
+            $products = $this->productModel->getAll();
+            require_once dirname(__DIR__) . '/views/products/index.php';
+            return;
+        }
         $product = $this->productModel->getById($id);
         $proveedores = $this->productModel->getProveedores();
         if (!$product) {
@@ -185,10 +192,9 @@ class ProductController {
             }
         } catch (Exception $e) {
             $errors[] = htmlspecialchars($e->getMessage());
+            $products = $this->productModel->getAll();
+            require_once dirname(__DIR__) . '/views/products/index.php';
         }
-
-        $products = $this->productModel->getAll();
-        require_once dirname(__DIR__) . '/views/products/index.php';
     }
 }
 ?>

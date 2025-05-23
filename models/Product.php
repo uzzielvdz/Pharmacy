@@ -60,6 +60,19 @@ class Product {
         return $result['count'] > 0;
     }
 
+    public function checkHasMovements($id) {
+        $sql = "SELECT COUNT(*) as count FROM MovimientosStock WHERE id_producto = ?";
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            throw new Exception("Error preparando consulta: " . $this->conn->error);
+        }
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $result['count'] > 0;
+    }
+
     public function create($data) {
         if ($this->checkNameExists($data['nombre'])) {
             throw new Exception("Ya existe un producto con el nombre: " . $data['nombre']);
@@ -113,6 +126,9 @@ class Product {
     }
 
     public function delete($id) {
+        if ($this->checkHasMovements($id)) {
+            throw new Exception("No se puede eliminar el producto porque tiene movimientos de stock asociados.");
+        }
         $sql = "DELETE FROM Productos WHERE id_producto = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {

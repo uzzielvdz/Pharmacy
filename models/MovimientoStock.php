@@ -47,18 +47,32 @@ class MovimientoStock {
     public function create($data) {
         $this->conn->begin_transaction();
         try {
+            // Validar stock y caducidad
+            $sql = "SELECT stock, fecha_caducidad FROM Productos WHERE id_producto = ?";
+            $stmt = $this->conn->prepare($sql);
+            if (!$stmt) {
+                throw new Exception("Error al preparar la consulta para validar el producto.");
+            }
+            $stmt->bind_param("i", $data['id_producto']);
+            $stmt->execute();
+            $product = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$product) {
+                throw new Exception("Producto no encontrado.");
+            }
+
             if ($data['tipo_movimiento'] === 'salida') {
-                $sql = "SELECT stock FROM Productos WHERE id_producto = ?";
-                $stmt = $this->conn->prepare($sql);
-                $stmt->bind_param("i", $data['id_producto']);
-                $stmt->execute();
-                $result = $stmt->get_result()->fetch_assoc();
-                $stmt->close();
-                if ($result['stock'] < $data['cantidad']) {
-                    throw new Exception("No hay suficiente stock para realizar la salida. Stock actual: " . $result['stock']);
+                if ($product['stock'] < $data['cantidad']) {
+                    throw new Exception("No hay suficiente stock para realizar la salida. Stock actual: " . $product['stock']);
+                }
+                // Omitir validación de caducidad para eliminaciones
+                if ($data['motivo'] !== 'Eliminación de producto' && $product['fecha_caducidad'] && $product['fecha_caducidad'] < date('Y-m-d')) {
+                    throw new Exception("No se puede registrar salida de un producto caducado");
                 }
             }
 
+            // Registrar movimiento
             $sql = "INSERT INTO MovimientosStock (id_producto, tipo_movimiento, cantidad, fecha, motivo) 
                     VALUES (?, ?, ?, ?, ?)";
             $stmt = $this->conn->prepare($sql);
@@ -79,9 +93,13 @@ class MovimientoStock {
             }
             $stmt->close();
 
+            // Actualizar stock
             $sql = "UPDATE Productos SET stock = stock + ? WHERE id_producto = ?";
             $stockChange = $data['tipo_movimiento'] === 'entrada' ? $data['cantidad'] : -$data['cantidad'];
             $stmt = $this->conn->prepare($sql);
+            if (!$stmt) {
+                throw new Exception("Error al preparar la consulta para actualizar el stock.");
+            }
             $stmt->bind_param("ii", $stockChange, $data['id_producto']);
             $result = $stmt->execute();
             if (!$result) {
@@ -111,16 +129,19 @@ class MovimientoStock {
             $stmt->execute();
             $stmt->close();
 
-            // Validar nuevo stock para salidas
+            // Validar nuevo stock y caducidad
+            $sql = "SELECT stock, fecha_caducidad FROM Productos WHERE id_producto = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("i", $data['id_producto']);
+            $stmt->execute();
+            $product = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
             if ($data['tipo_movimiento'] === 'salida') {
-                $sql = "SELECT stock FROM Productos WHERE id_producto = ?";
-                $stmt = $this->conn->prepare($sql);
-                $stmt->bind_param("i", $data['id_producto']);
-                $stmt->execute();
-                $result = $stmt->get_result()->fetch_assoc();
-                $stmt->close();
-                if ($result['stock'] < $data['cantidad']) {
-                    throw new Exception("No hay suficiente stock para realizar la salida. Stock actual: " . $result['stock']);
+                if ($product['stock'] < $data['cantidad']) {
+                    throw new Exception("No hay suficiente stock para realizar la salida. Stock actual: " . $product['stock']);
+                }
+                if ($data['motivo'] !== 'Eliminación de producto' && $product['fecha_caducidad'] && $product['fecha_caducidad'] < date('Y-m-d')) {
+                    throw new Exception("No se puede registrar salida de un producto caducado");
                 }
             }
 
