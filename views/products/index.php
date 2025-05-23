@@ -3,6 +3,16 @@
 <a href="<?php echo BASE_URL; ?>/public/index.php?controller=proveedor&action=index">Gestionar Proveedores</a><br>
 <a href="<?php echo BASE_URL; ?>/public/index.php?controller=movimiento&action=index">Gestionar Movimientos</a><br><br>
 <a href="<?php echo BASE_URL; ?>/public/index.php?controller=product&action=create">Crear Nuevo Producto</a>
+<?php if (!empty($errors)): ?>
+    <div style="background-color: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 15px; border: 1px solid #f5c6cb; border-radius: 4px;">
+        <strong>Error:</strong>
+        <ul>
+            <?php foreach ($errors as $error): ?>
+                <li><?php echo htmlspecialchars($error); ?></li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
+<?php endif; ?>
 <?php if (empty($products)): ?>
     <p>No hay productos registrados.</p>
 <?php else: ?>

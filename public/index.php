@@ -84,6 +84,23 @@ try {
             case 'store':
                 $controllerInstance->store();
                 break;
+            case 'edit':
+                if ($id) {
+                    $controllerInstance->edit($id);
+                } else {
+                    throw new Exception("ID inválido");
+                }
+                break;
+            case 'update':
+                $controllerInstance->update();
+                break;
+            case 'delete':
+                if ($id) {
+                    $controllerInstance->delete($id);
+                } else {
+                    throw new Exception("ID inválido");
+                }
+                break;
             default:
                 $controllerInstance->index();
         }
