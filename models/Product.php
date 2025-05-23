@@ -40,7 +40,30 @@ class Product {
         return $result;
     }
 
+    public function checkNameExists($nombre, $excludeId = null) {
+        $sql = "SELECT COUNT(*) as count FROM Productos WHERE nombre = ?";
+        if ($excludeId !== null) {
+            $sql .= " AND id_producto != ?";
+        }
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            throw new Exception("Error preparando consulta: " . $this->conn->error);
+        }
+        if ($excludeId !== null) {
+            $stmt->bind_param("si", $nombre, $excludeId);
+        } else {
+            $stmt->bind_param("s", $nombre);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $result['count'] > 0;
+    }
+
     public function create($data) {
+        if ($this->checkNameExists($data['nombre'])) {
+            throw new Exception("Ya existe un producto con el nombre: " . $data['nombre']);
+        }
         $sql = "INSERT INTO Productos (nombre, descripcion, precio, fecha_caducidad, lote, stock, id_proveedor) 
                 VALUES (?, ?, ?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);
@@ -58,11 +81,15 @@ class Product {
             $data['id_proveedor']
         );
         $result = $stmt->execute();
+        $insertId = $this->conn->insert_id;
         $stmt->close();
-        return $result;
+        return $result ? $insertId : false;
     }
 
     public function update($id, $data) {
+        if ($this->checkNameExists($data['nombre'], $id)) {
+            throw new Exception("Ya existe otro producto con el nombre: " . $data['nombre']);
+        }
         $sql = "UPDATE Productos SET nombre = ?, descripcion = ?, precio = ?, fecha_caducidad = ?, lote = ?, stock = ?, id_proveedor = ? 
                 WHERE id_producto = ?";
         $stmt = $this->conn->prepare($sql);
@@ -98,8 +125,7 @@ class Product {
         if ($result && $affectedRows > 0) {
             return true;
         } else {
-            echo "No se eliminó ningún producto con ID $id. Error: " . $this->conn->error;
-            return false;
+            throw new Exception("No se eliminó ningún producto con ID $id.");
         }
     }
 

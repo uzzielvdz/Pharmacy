@@ -18,6 +18,8 @@ class ProductController {
 
     public function create() {
         $proveedores = $this->productModel->getProveedores();
+        $errors = $_REQUEST['errors'] ?? [];
+        $formData = $_REQUEST['formData'] ?? [];
         require_once dirname(__DIR__) . '/views/products/create.php';
     }
 
@@ -25,6 +27,7 @@ class ProductController {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $errors = ['Por favor, usa el formulario para registrar el producto.'];
             $proveedores = $this->productModel->getProveedores();
+            $formData = [];
             require_once dirname(__DIR__) . '/views/products/create.php';
             return;
         }
@@ -35,6 +38,7 @@ class ProductController {
             'stock' => filter_var($_POST['stock'] ?? 0, FILTER_VALIDATE_INT),
             'precio' => filter_var($_POST['precio'] ?? 0, FILTER_VALIDATE_FLOAT),
             'fecha_caducidad' => trim($_POST['fecha_caducidad'] ?? ''),
+            'lote' => trim($_POST['lote'] ?? ''),
             'id_proveedor' => filter_var($_POST['id_proveedor'] ?? 0, FILTER_VALIDATE_INT)
         ];
 
@@ -68,11 +72,12 @@ class ProductController {
                 header('Location: ' . BASE_URL . '/public/index.php?controller=product&action=index');
                 exit;
             } catch (Exception $e) {
-                $errors[] = 'No se pudo registrar el producto: ' . htmlspecialchars($e->getMessage());
+                $errors[] = htmlspecialchars($e->getMessage());
             }
         }
 
         $proveedores = $this->productModel->getProveedores();
+        $formData = $data;
         require_once dirname(__DIR__) . '/views/products/create.php';
     }
 
@@ -85,6 +90,7 @@ class ProductController {
             require_once dirname(__DIR__) . '/views/products/index.php';
             return;
         }
+        $formData = $_REQUEST['formData'] ?? $product;
         require_once dirname(__DIR__) . '/views/products/edit.php';
     }
 
@@ -103,6 +109,7 @@ class ProductController {
             'stock' => filter_var($_POST['stock'] ?? 0, FILTER_VALIDATE_INT),
             'precio' => filter_var($_POST['precio'] ?? 0, FILTER_VALIDATE_FLOAT),
             'fecha_caducidad' => trim($_POST['fecha_caducidad'] ?? ''),
+            'lote' => trim($_POST['lote'] ?? ''),
             'id_proveedor' => filter_var($_POST['id_proveedor'] ?? 0, FILTER_VALIDATE_INT)
         ];
 
@@ -145,12 +152,12 @@ class ProductController {
                     exit;
                 }
             } catch (Exception $e) {
-                $errors[] = 'No se pudo actualizar el producto: ' . htmlspecialchars($e->getMessage());
+                $errors[] = htmlspecialchars($e->getMessage());
             }
         }
 
-        $product = $data;
-        $product['id_producto'] = $id;
+        $formData = $data;
+        $formData['id_producto'] = $id;
         $proveedores = $this->productModel->getProveedores();
         require_once dirname(__DIR__) . '/views/products/edit.php';
     }
@@ -162,7 +169,6 @@ class ProductController {
             if (!$product) {
                 $errors[] = 'Producto no encontrado.';
             } else {
-                // Registrar movimiento de salida si hay stock
                 if ($product['stock'] > 0) {
                     $movimientoData = [
                         'id_producto' => $id,
@@ -173,17 +179,14 @@ class ProductController {
                     ];
                     $this->movimientoModel->create($movimientoData);
                 }
-
-                // Eliminar producto
                 $this->productModel->delete($id);
                 header('Location: ' . BASE_URL . '/public/index.php?controller=product&action=index');
                 exit;
             }
         } catch (Exception $e) {
-            $errors[] = 'No se pudo eliminar el producto. Asegúrate de que no tenga movimientos asociados o intenta de nuevo.';
+            $errors[] = htmlspecialchars($e->getMessage());
         }
 
-        // Mostrar errores en la lista de productos
         $products = $this->productModel->getAll();
         require_once dirname(__DIR__) . '/views/products/index.php';
     }
