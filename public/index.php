@@ -121,6 +121,13 @@ try {
                     throw new Exception("ID inválido");
                 }
                 break;
+            case 'delete':
+                if ($id) {
+                    $controllerInstance->delete($id);
+                } else {
+                    throw new Exception("ID inválido");
+                }
+                break;
             default:
                 $controllerInstance->index();
         }
