@@ -1,48 +1,51 @@
 <?php include dirname(__DIR__) . '/layouts/header.php'; ?>
-<h2>Lista de Movimientos</h2>
-<a href="<?php echo BASE_URL; ?>/public/index.php?controller=product&action=index">Gestionar Productos</a><br><br>
-<a href="<?php echo BASE_URL; ?>/public/index.php?controller=movimiento&action=create">Registrar Nuevo Movimiento</a>
+<h2 class="text-2xl font-semibold mb-4">Lista de Movimientos</h2>
 <?php if (!empty($errors)): ?>
-    <div style="background-color: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 15px; border: 1px solid #f5c6cb; border-radius: 4px;">
-        <strong>Error:</strong>
-        <ul>
+    <div class="alert alert-danger animate-slide-in" role="alert">
+        <ul class="list-unstyled">
             <?php foreach ($errors as $error): ?>
-                <li><?php echo htmlspecialchars($error); ?></li>
+                <li><i class="bi bi-exclamation-circle me-2"></i><?php echo htmlspecialchars($error); ?></li>
             <?php endforeach; ?>
         </ul>
     </div>
 <?php endif; ?>
+<div class="mb-4">
+    <a href="<?php echo BASE_URL; ?>/public/index.php?controller=movimiento&action=create" class="btn btn-success">Registrar Nuevo Movimiento</a>
+    <a href="<?php echo BASE_URL; ?>/public/index.php?controller=product&action=index" class="btn btn-secondary ms-2">Gestionar Productos</a>
+</div>
 <?php if (empty($movimientos)): ?>
-    <p>No hay movimientos registrados.</p>
+    <p class="text-gray-400">No hay movimientos registrados.</p>
 <?php else: ?>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Producto</th>
-                <th>Tipo</th>
-                <th>Cantidad</th>
-                <th>Fecha</th>
-                <th>Motivo</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach ($movimientos as $movimiento): ?>
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
                 <tr>
-                    <td><?php echo htmlspecialchars($movimiento['id_movimiento']); ?></td>
-                    <td><?php echo htmlspecialchars($movimiento['producto']); ?></td>
-                    <td><?php echo htmlspecialchars($movimiento['tipo_movimiento']); ?></td>
-                    <td><?php echo htmlspecialchars($movimiento['cantidad']); ?></td>
-                    <td><?php echo htmlspecialchars($movimiento['fecha']); ?></td>
-                    <td><?php echo htmlspecialchars($movimiento['motivo'] ?? 'Sin motivo'); ?></td>
-                    <td>
-                        <a href="<?php echo BASE_URL; ?>/public/index.php?controller=movimiento&action=edit&id=<?php echo $movimiento['id_movimiento']; ?>">Editar</a>
-                        <a href="<?php echo BASE_URL; ?>/public/index.php?controller=movimiento&action=delete&id=<?php echo $movimiento['id_movimiento']; ?>" onclick="return confirm('¿Estás seguro de eliminar este movimiento?');">Eliminar</a>
-                    </td>
+                    <th>ID</th>
+                    <th>Producto</th>
+                    <th>Tipo</th>
+                    <th>Cantidad</th>
+                    <th>Fecha</th>
+                    <th>Motivo</th>
+                    <th>Acciones</th>
                 </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                <?php foreach ($movimientos as $movimiento): ?>
+                    <tr class="animate-fade-in">
+                        <td><?php echo htmlspecialchars($movimiento['id_movimiento']); ?></td>
+                        <td><?php echo htmlspecialchars($movimiento['producto']); ?></td>
+                        <td><?php echo htmlspecialchars($movimiento['tipo_movimiento']); ?></td>
+                        <td><?php echo htmlspecialchars($movimiento['cantidad']); ?></td>
+                        <td><?php echo htmlspecialchars($movimiento['fecha']); ?></td>
+                        <td><?php echo htmlspecialchars($movimiento['motivo'] ?? 'Sin motivo'); ?></td>
+                        <td>
+                            <a href="<?php echo BASE_URL; ?>/public/index.php?controller=movimiento&action=edit&id=<?php echo $movimiento['id_movimiento']; ?>" class="btn btn-primary btn-sm">Editar</a>
+                            <a href="<?php echo BASE_URL; ?>/public/index.php?controller=movimiento&action=delete&id=<?php echo $movimiento['id_movimiento']; ?>" class="btn btn-danger btn-sm">Eliminar</a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
 <?php endif; ?>
 <?php include dirname(__DIR__) . '/layouts/footer.php'; ?>

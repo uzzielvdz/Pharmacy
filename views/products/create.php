@@ -1,38 +1,57 @@
 <?php include dirname(__DIR__) . '/layouts/header.php'; ?>
-<h2>Crear Nuevo Producto</h2>
-<?php if (!empty($errors)): ?>
-    <div style="background-color: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 15px; border: 1px solid #f5c6cb; border-radius: 4px;">
-        <strong>Error:</strong>
-        <ul>
-            <?php foreach ($errors as $error): ?>
-                <li><?php echo htmlspecialchars($error); ?></li>
-            <?php endforeach; ?>
-        </ul>
+<div class="card bg-gray-700 animate-slide-in">
+    <div class="card-body">
+        <h2 class="card-title text-2xl mb-4">Crear Nuevo Producto</h2>
+        <?php if (!empty($errors)): ?>
+            <div class="alert alert-danger animate-slide-in" role="alert">
+                <ul class="list-unstyled">
+                    <?php foreach ($errors as $error): ?>
+                        <li><i class="bi bi-exclamation-circle me-2"></i><?php echo htmlspecialchars($error); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        <?php endif; ?>
+        <form action="<?php echo BASE_URL; ?>/public/index.php?controller=product&action=store" method="POST" class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Nombre</label>
+                <input type="text" name="nombre" class="form-control" value="<?php echo isset($formData['nombre']) ? htmlspecialchars($formData['nombre']) : ''; ?>" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Precio</label>
+                <input type="number" name="precio" min="0.01" step="0.01" class="form-control" value="<?php echo isset($formData['precio']) ? htmlspecialchars($formData['precio']) : ''; ?>" required>
+            </div>
+            <div class="col-12">
+                <label class="form-label">Descripción</label>
+                <textarea name="descripcion" class="form-control"><?php echo isset($formData['descripcion']) ? htmlspecialchars($formData['descripcion']) : ''; ?></textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Stock</label>
+                <input type="number" name="stock" min="0" class="form-control" value="<?php echo isset($formData['stock']) ? htmlspecialchars($formData['stock']) : '0'; ?>" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Fecha de Caducidad</label>
+                <input type="date" name="fecha_caducidad" class="form-control" value="<?php echo isset($formData['fecha_caducidad']) ? htmlspecialchars($formData['fecha_caducidad']) : ''; ?>">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Lote</label>
+                <input type="text" name="lote" class="form-control" value="<?php echo isset($formData['lote']) ? htmlspecialchars($formData['lote']) : ''; ?>">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Proveedor</label>
+                <select name="id_proveedor" class="form-select" required>
+                    <option value="">Seleccione un proveedor</option>
+                    <?php foreach ($proveedores as $proveedor): ?>
+                        <option value="<?php echo $proveedor['id_proveedor']; ?>" <?php echo (isset($formData['id_proveedor']) && $formData['id_proveedor'] == $proveedor['id_proveedor']) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($proveedor['nombre']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-12 mt-4">
+                <button type="submit" class="btn btn-success">Crear</button>
+                <a href="<?php echo BASE_URL; ?>/public/index.php?controller=product&action=index" class="btn btn-secondary ms-2">Cancelar</a>
+            </div>
+        </form>
     </div>
-<?php endif; ?>
-<form action="<?php echo BASE_URL; ?>/public/index.php?controller=product&action=store" method="POST">
-    <label>Nombre:</label><br>
-    <input type="text" name="nombre" value="<?php echo isset($formData['nombre']) ? htmlspecialchars($formData['nombre']) : ''; ?>" required><br>
-    <label>Descripción:</label><br>
-    <textarea name="descripcion"><?php echo isset($formData['descripcion']) ? htmlspecialchars($formData['descripcion']) : ''; ?></textarea><br>
-    <label>Stock:</label><br>
-    <input type="number" name="stock" min="0" value="<?php echo isset($formData['stock']) ? htmlspecialchars($formData['stock']) : '0'; ?>" required><br>
-    <label>Precio:</label><br>
-    <input type="number" name="precio" min="0.01" step="0.01" value="<?php echo isset($formData['precio']) ? htmlspecialchars($formData['precio']) : ''; ?>" required><br>
-    <label>Fecha de Caducidad:</label><br>
-    <input type="date" name="fecha_caducidad" value="<?php echo isset($formData['fecha_caducidad']) ? htmlspecialchars($formData['fecha_caducidad']) : ''; ?>"><br>
-    <label>Lote:</label><br>
-    <input type="text" name="lote" value="<?php echo isset($formData['lote']) ? htmlspecialchars($formData['lote']) : ''; ?>"><br>
-    <label>Proveedor:</label><br>
-    <select name="id_proveedor" required>
-        <option value="">Seleccione un proveedor</option>
-        <?php foreach ($proveedores as $proveedor): ?>
-            <option value="<?php echo $proveedor['id_proveedor']; ?>" <?php echo (isset($formData['id_proveedor']) && $formData['id_proveedor'] == $proveedor['id_proveedor']) ? 'selected' : ''; ?>>
-                <?php echo htmlspecialchars($proveedor['nombre']); ?>
-            </option>
-        <?php endforeach; ?>
-    </select><br><br>
-    <input type="submit" value="Crear">
-    <a href="<?php echo BASE_URL; ?>/public/index.php?controller=product&action=index">Cancelar</a>
-</form>
+</div>
 <?php include dirname(__DIR__) . '/layouts/footer.php'; ?>

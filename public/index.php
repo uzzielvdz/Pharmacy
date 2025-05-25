@@ -94,6 +94,16 @@ try {
             case 'store':
                 $controllerInstance->store();
                 break;
+            case 'edit':
+                if ($id) {
+                    $controllerInstance->edit($id);
+                } else {
+                    throw new Exception("E006 Validación: El ID proporcionado no es válido.");
+                }
+                break;
+            case 'update':
+                $controllerInstance->update();
+                break;
             case 'delete':
                 if ($id) {
                     $controllerInstance->delete($id);
@@ -142,7 +152,7 @@ try {
         }
     }
 } catch (Exception $e) {
-    http_response_code(500);
-    echo "Error: " . htmlspecialchars($e->getMessage());
+    $errors = [$e->getMessage()];
+    require_once dirname(__DIR__) . '/views/error.php';
 }
 ?>

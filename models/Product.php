@@ -9,7 +9,7 @@ class Product {
         try {
             $this->conn = getConnection();
         } catch (Exception $e) {
-            die("Error en la conexión a la base de datos: " . $e->getMessage());
+            throw new Exception("E005 Base de Datos: No se pudo conectar a la base de datos.");
         }
     }
 
@@ -19,7 +19,7 @@ class Product {
                 LEFT JOIN Proveedores pr ON p.id_proveedor = pr.id_proveedor";
         $result = $this->conn->query($sql);
         if (!$result) {
-            throw new Exception("Error en la consulta: " . $this->conn->error);
+            throw new Exception("E005 Base de Datos: Error al obtener la lista de productos.");
         }
         return $result->fetch_all(MYSQLI_ASSOC);
     }
@@ -31,12 +31,15 @@ class Product {
                 WHERE p.id_producto = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
-            throw new Exception("Error preparando consulta: " . $this->conn->error);
+            throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
         }
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $result = $stmt->get_result()->fetch_assoc();
         $stmt->close();
+        if (!$result) {
+            throw new Exception("E001 Productos: Producto no encontrado.");
+        }
         return $result;
     }
 
@@ -47,7 +50,7 @@ class Product {
         }
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
-            throw new Exception("Error preparando consulta: " . $this->conn->error);
+            throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
         }
         if ($excludeId !== null) {
             $stmt->bind_param("si", $nombre, $excludeId);
@@ -57,91 +60,116 @@ class Product {
         $stmt->execute();
         $result = $stmt->get_result()->fetch_assoc();
         $stmt->close();
-        return $result['count'] > 0;
+        if ($result['count'] > 0) {
+            throw new Exception("E001 Productos: Ya existe un producto con el nombre: " . htmlspecialchars($nombre) . ".");
+        }
+        return false;
     }
 
     public function checkHasMovements($id) {
         $sql = "SELECT COUNT(*) as count FROM MovimientosStock WHERE id_producto = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
-            throw new Exception("Error preparando consulta: " . $this->conn->error);
+            throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
         }
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $result = $stmt->get_result()->fetch_assoc();
         $stmt->close();
-        return $result['count'] > 0;
+        if ($result['count'] > 0) {
+            throw new Exception("E001 Productos: No se puede eliminar el producto porque tiene movimientos de stock asociados.");
+        }
+        return false;
     }
 
     public function create($data) {
-        if ($this->checkNameExists($data['nombre'])) {
-            throw new Exception("Ya existe un producto con el nombre: " . $data['nombre']);
+        $this->conn->begin_transaction();
+        try {
+            $this->checkNameExists($data['nombre']);
+            $sql = "INSERT INTO Productos (nombre, descripcion, precio, fecha_caducidad, lote, stock, id_proveedor) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?)";
+            $stmt = $this->conn->prepare($sql);
+            if (!$stmt) {
+                throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
+            }
+            $stmt->bind_param(
+                "ssdssii",
+                $data['nombre'],
+                $data['descripcion'],
+                $data['precio'],
+                $data['fecha_caducidad'],
+                $data['lote'],
+                $data['stock'],
+                $data['id_proveedor']
+            );
+            $result = $stmt->execute();
+            if (!$result) {
+                throw new Exception("E005 Base de Datos: Error al crear el producto.");
+            }
+            $insertId = $this->conn->insert_id;
+            $stmt->close();
+            $this->conn->commit();
+            return $insertId;
+        } catch (Exception $e) {
+            $this->conn->rollback();
+            throw $e;
         }
-        $sql = "INSERT INTO Productos (nombre, descripcion, precio, fecha_caducidad, lote, stock, id_proveedor) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)";
-        $stmt = $this->conn->prepare($sql);
-        if (!$stmt) {
-            throw new Exception("Error preparando consulta: " . $this->conn->error);
-        }
-        $stmt->bind_param(
-            "ssdssii",
-            $data['nombre'],
-            $data['descripcion'],
-            $data['precio'],
-            $data['fecha_caducidad'],
-            $data['lote'],
-            $data['stock'],
-            $data['id_proveedor']
-        );
-        $result = $stmt->execute();
-        $insertId = $this->conn->insert_id;
-        $stmt->close();
-        return $result ? $insertId : false;
     }
 
     public function update($id, $data) {
-        if ($this->checkNameExists($data['nombre'], $id)) {
-            throw new Exception("Ya existe otro producto con el nombre: " . $data['nombre']);
+        $this->conn->begin_transaction();
+        try {
+            $this->checkNameExists($data['nombre'], $id);
+            $sql = "UPDATE Productos SET nombre = ?, descripcion = ?, precio = ?, fecha_caducidad = ?, lote = ?, stock = ?, id_proveedor = ? 
+                    WHERE id_producto = ?";
+            $stmt = $this->conn->prepare($sql);
+            if (!$stmt) {
+                throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
+            }
+            $stmt->bind_param(
+                "ssdssiii",
+                $data['nombre'],
+                $data['descripcion'],
+                $data['precio'],
+                $data['fecha_caducidad'],
+                $data['lote'],
+                $data['stock'],
+                $data['id_proveedor'],
+                $id
+            );
+            $result = $stmt->execute();
+            if (!$result || $stmt->affected_rows === 0) {
+                throw new Exception("E001 Productos: No se actualizó ningún producto con ID $id.");
+            }
+            $stmt->close();
+            $this->conn->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->conn->rollback();
+            throw $e;
         }
-        $sql = "UPDATE Productos SET nombre = ?, descripcion = ?, precio = ?, fecha_caducidad = ?, lote = ?, stock = ?, id_proveedor = ? 
-                WHERE id_producto = ?";
-        $stmt = $this->conn->prepare($sql);
-        if (!$stmt) {
-            throw new Exception("Error preparando consulta: " . $this->conn->error);
-        }
-        $stmt->bind_param(
-            "ssdssiii",
-            $data['nombre'],
-            $data['descripcion'],
-            $data['precio'],
-            $data['fecha_caducidad'],
-            $data['lote'],
-            $data['stock'],
-            $data['id_proveedor'],
-            $id
-        );
-        $result = $stmt->execute();
-        $stmt->close();
-        return $result;
     }
 
     public function delete($id) {
-        if ($this->checkHasMovements($id)) {
-            throw new Exception("No se puede eliminar el producto porque tiene movimientos de stock asociados.");
-        }
-        $sql = "DELETE FROM Productos WHERE id_producto = ?";
-        $stmt = $this->conn->prepare($sql);
-        if (!$stmt) {
-            throw new Exception("Error preparando consulta: " . $this->conn->error);
-        }
-        $stmt->bind_param("i", $id);
-        $result = $stmt->execute();
-        $affectedRows = $stmt->affected_rows;
-        $stmt->close();
-        if ($result && $affectedRows > 0) {
+        $this->conn->begin_transaction();
+        try {
+            $this->checkHasMovements($id);
+            $sql = "DELETE FROM Productos WHERE id_producto = ?";
+            $stmt = $this->conn->prepare($sql);
+            if (!$stmt) {
+                throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
+            }
+            $stmt->bind_param("i", $id);
+            $result = $stmt->execute();
+            if (!$result || $stmt->affected_rows === 0) {
+                throw new Exception("E001 Productos: No se eliminó ningún producto con ID $id.");
+            }
+            $stmt->close();
+            $this->conn->commit();
             return true;
-        } else {
-            throw new Exception("No se eliminó ningún producto con ID $id.");
+        } catch (Exception $e) {
+            $this->conn->rollback();
+            throw $e;
         }
     }
 
@@ -149,7 +177,7 @@ class Product {
         $sql = "SELECT id_proveedor, nombre FROM Proveedores";
         $result = $this->conn->query($sql);
         if (!$result) {
-            throw new Exception("Error en la consulta: " . $this->conn->error);
+            throw new Exception("E005 Base de Datos: Error al obtener la lista de proveedores.");
         }
         return $result->fetch_all(MYSQLI_ASSOC);
     }

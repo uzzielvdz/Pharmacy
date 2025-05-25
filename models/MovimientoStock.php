@@ -13,7 +13,7 @@ class MovimientoStock {
         try {
             $this->conn = getConnection();
         } catch (Exception $e) {
-            die("No se pudo conectar a la base de datos: " . $e->getMessage());
+            throw new Exception("E005 Base de Datos: No se pudo conectar a la base de datos.");
         }
     }
 
@@ -23,7 +23,7 @@ class MovimientoStock {
                 JOIN Productos p ON m.id_producto = p.id_producto";
         $result = $this->conn->query($sql);
         if (!$result) {
-            throw new Exception("No se pudo obtener la lista de movimientos: " . $this->conn->error);
+            throw new Exception("E005 Base de Datos: Error al obtener la lista de movimientos.");
         }
         return $result->fetch_all(MYSQLI_ASSOC);
     }
@@ -34,12 +34,15 @@ class MovimientoStock {
                 JOIN Productos p ON m.id_producto = p.id_producto 
                 WHERE m.id_movimiento = ?";
         $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
+        }
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $result = $stmt->get_result()->fetch_assoc();
         $stmt->close();
         if (!$result) {
-            throw new Exception("Movimiento no encontrado.");
+            throw new Exception("E003 Movimientos: Movimiento no encontrado.");
         }
         return $result;
     }
@@ -47,11 +50,10 @@ class MovimientoStock {
     public function create($data) {
         $this->conn->begin_transaction();
         try {
-            // Validar stock y caducidad
             $sql = "SELECT stock, fecha_caducidad FROM Productos WHERE id_producto = ?";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
-                throw new Exception("Error al preparar la consulta para validar el producto.");
+                throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
             }
             $stmt->bind_param("i", $data['id_producto']);
             $stmt->execute();
@@ -59,25 +61,22 @@ class MovimientoStock {
             $stmt->close();
 
             if (!$product) {
-                throw new Exception("Producto no encontrado.");
+                throw new Exception("E001 Productos: Producto no encontrado.");
             }
-
             if ($data['tipo_movimiento'] === 'salida') {
                 if ($product['stock'] < $data['cantidad']) {
-                    throw new Exception("No hay suficiente stock para realizar la salida. Stock actual: " . $product['stock']);
+                    throw new Exception("E003 Movimientos: No hay suficiente stock para realizar la salida. Stock actual: " . $product['stock'] . ".");
                 }
-                // Omitir validación de caducidad para eliminaciones
                 if ($data['motivo'] !== 'Eliminación de producto' && $product['fecha_caducidad'] && $product['fecha_caducidad'] < date('Y-m-d')) {
-                    throw new Exception("No se puede registrar salida de un producto caducado");
+                    throw new Exception("E003 Movimientos: No se puede registrar salida de un producto caducado.");
                 }
             }
 
-            // Registrar movimiento
             $sql = "INSERT INTO MovimientosStock (id_producto, tipo_movimiento, cantidad, fecha, motivo) 
                     VALUES (?, ?, ?, ?, ?)";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
-                throw new Exception("Error al preparar la consulta para registrar el movimiento.");
+                throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
             }
             $stmt->bind_param(
                 "isiss",
@@ -89,21 +88,20 @@ class MovimientoStock {
             );
             $result = $stmt->execute();
             if (!$result) {
-                throw new Exception("No se pudo registrar el movimiento: " . $stmt->error);
+                throw new Exception("E005 Base de Datos: Error al registrar el movimiento.");
             }
             $stmt->close();
 
-            // Actualizar stock
             $sql = "UPDATE Productos SET stock = stock + ? WHERE id_producto = ?";
             $stockChange = $data['tipo_movimiento'] === 'entrada' ? $data['cantidad'] : -$data['cantidad'];
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
-                throw new Exception("Error al preparar la consulta para actualizar el stock.");
+                throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
             }
             $stmt->bind_param("ii", $stockChange, $data['id_producto']);
             $result = $stmt->execute();
             if (!$result) {
-                throw new Exception("No se pudo actualizar el stock: " . $stmt->error);
+                throw new Exception("E005 Base de Datos: Error al actualizar el stock.");
             }
             $stmt->close();
 
@@ -118,37 +116,48 @@ class MovimientoStock {
     public function update($id, $data) {
         $this->conn->begin_transaction();
         try {
-            // Obtener movimiento actual
             $current = $this->getById($id);
             $currentStockChange = $current['tipo_movimiento'] === 'entrada' ? $current['cantidad'] : -$current['cantidad'];
 
-            // Revertir stock actual
             $sql = "UPDATE Productos SET stock = stock - ? WHERE id_producto = ?";
             $stmt = $this->conn->prepare($sql);
+            if (!$stmt) {
+                throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
+            }
             $stmt->bind_param("ii", $currentStockChange, $current['id_producto']);
-            $stmt->execute();
+            $result = $stmt->execute();
+            if (!$result) {
+                throw new Exception("E005 Base de Datos: Error al revertir el stock.");
+            }
             $stmt->close();
 
-            // Validar nuevo stock y caducidad
             $sql = "SELECT stock, fecha_caducidad FROM Productos WHERE id_producto = ?";
             $stmt = $this->conn->prepare($sql);
+            if (!$stmt) {
+                throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
+            }
             $stmt->bind_param("i", $data['id_producto']);
             $stmt->execute();
             $product = $stmt->get_result()->fetch_assoc();
             $stmt->close();
+            if (!$product) {
+                throw new Exception("E001 Productos: Producto no encontrado.");
+            }
             if ($data['tipo_movimiento'] === 'salida') {
                 if ($product['stock'] < $data['cantidad']) {
-                    throw new Exception("No hay suficiente stock para realizar la salida. Stock actual: " . $product['stock']);
+                    throw new Exception("E003 Movimientos: No hay suficiente stock para realizar la salida. Stock actual: " . $product['stock'] . ".");
                 }
                 if ($data['motivo'] !== 'Eliminación de producto' && $product['fecha_caducidad'] && $product['fecha_caducidad'] < date('Y-m-d')) {
-                    throw new Exception("No se puede registrar salida de un producto caducado");
+                    throw new Exception("E003 Movimientos: No se puede registrar salida de un producto caducado.");
                 }
             }
 
-            // Actualizar movimiento
             $sql = "UPDATE MovimientosStock SET id_producto = ?, tipo_movimiento = ?, cantidad = ?, fecha = ?, motivo = ? 
                     WHERE id_movimiento = ?";
             $stmt = $this->conn->prepare($sql);
+            if (!$stmt) {
+                throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
+            }
             $stmt->bind_param(
                 "isisis",
                 $data['id_producto'],
@@ -160,18 +169,20 @@ class MovimientoStock {
             );
             $result = $stmt->execute();
             if (!$result) {
-                throw new Exception("No se pudo actualizar el movimiento: " . $stmt->error);
+                throw new Exception("E005 Base de Datos: Error al actualizar el movimiento.");
             }
             $stmt->close();
 
-            // Aplicar nuevo stock
             $newStockChange = $data['tipo_movimiento'] === 'entrada' ? $data['cantidad'] : -$data['cantidad'];
             $sql = "UPDATE Productos SET stock = stock + ? WHERE id_producto = ?";
             $stmt = $this->conn->prepare($sql);
+            if (!$stmt) {
+                throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
+            }
             $stmt->bind_param("ii", $newStockChange, $data['id_producto']);
             $result = $stmt->execute();
             if (!$result) {
-                throw new Exception("No se pudo actualizar el stock: " . $stmt->error);
+                throw new Exception("E005 Base de Datos: Error al actualizar el stock.");
             }
             $stmt->close();
 
@@ -189,36 +200,42 @@ class MovimientoStock {
             $current = $this->getById($id);
             $stockChange = $current['tipo_movimiento'] === 'entrada' ? -$current['cantidad'] : $current['cantidad'];
 
-            // Verificar stock antes de revertir
             if ($stockChange < 0) {
                 $sql = "SELECT stock FROM Productos WHERE id_producto = ?";
                 $stmt = $this->conn->prepare($sql);
+                if (!$stmt) {
+                    throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
+                }
                 $stmt->bind_param("i", $current['id_producto']);
                 $stmt->execute();
                 $result = $stmt->get_result()->fetch_assoc();
                 $stmt->close();
                 if ($result['stock'] < abs($stockChange)) {
-                    throw new Exception("No hay suficiente stock para revertir la eliminación. Stock actual: " . $result['stock']);
+                    throw new Exception("E003 Movimientos: No hay suficiente stock para revertir la eliminación. Stock actual: " . $result['stock'] . ".");
                 }
             }
 
-            // Revertir stock
             $sql = "UPDATE Productos SET stock = stock + ? WHERE id_producto = ?";
             $stmt = $this->conn->prepare($sql);
+            if (!$stmt) {
+                throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
+            }
             $stmt->bind_param("ii", $stockChange, $current['id_producto']);
             $result = $stmt->execute();
             if (!$result) {
-                throw new Exception("No se pudo actualizar el stock: " . $stmt->error);
+                throw new Exception("E005 Base de Datos: Error al revertir el stock.");
             }
             $stmt->close();
 
-            // Eliminar movimiento
             $sql = "DELETE FROM MovimientosStock WHERE id_movimiento = ?";
             $stmt = $this->conn->prepare($sql);
+            if (!$stmt) {
+                throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
+            }
             $stmt->bind_param("i", $id);
             $result = $stmt->execute();
             if (!$result) {
-                throw new Exception("No se pudo eliminar el movimiento: " . $stmt->error);
+                throw new Exception("E005 Base de Datos: Error al eliminar el movimiento.");
             }
             $stmt->close();
 
@@ -234,7 +251,7 @@ class MovimientoStock {
         $sql = "SELECT id_producto, nombre FROM Productos";
         $result = $this->conn->query($sql);
         if (!$result) {
-            throw new Exception("No se pudo obtener la lista de productos: " . $this->conn->error);
+            throw new Exception("E005 Base de Datos: Error al obtener la lista de productos.");
         }
         return $result->fetch_all(MYSQLI_ASSOC);
     }

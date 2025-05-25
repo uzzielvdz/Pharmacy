@@ -5,109 +5,133 @@ class ProveedorController {
     private $proveedorModel;
 
     public function __construct() {
-        $this->proveedorModel = new Proveedor();
+        try {
+            $this->proveedorModel = new Proveedor();
+        } catch (Exception $e) {
+            throw new Exception("E005 Base de Datos: No se pudo inicializar el modelo de proveedores.");
+        }
     }
 
     public function index() {
-        $proveedores = $this->proveedorModel->getAll();
+        $errors = [];
+        $proveedores = [];
+        try {
+            $proveedores = $this->proveedorModel->getAll();
+        } catch (Exception $e) {
+            $errors[] = $e->getMessage();
+        }
         require_once dirname(__DIR__) . '/views/proveedores/index.php';
     }
 
     public function create() {
-        
-        if (file_exists(dirname(__DIR__) . '/views/proveedores/create.php')) {
-            require_once dirname(__DIR__) . '/views/proveedores/create.php';
-        } else {
-            echo "<br>Archivo NO existe";
-        }
-        exit;
+        $errors = [];
+        $formData = $_POST ?: [];
+        require_once dirname(__DIR__) . '/views/proveedores/create.php';
     }
 
     public function store() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            echo "Método no permitido.";
-            return;
-        }
-
-        $data = [
-            'nombre' => trim($_POST['nombre'] ?? ''),
-            'contacto' => trim($_POST['contacto'] ?? ''),
-            'email' => trim($_POST['email'] ?? '')
-        ];
-
-        if (empty($data['nombre']) || empty($data['contacto']) || empty($data['email']) || !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-            echo "Error: Todos los campos son obligatorios y el email debe ser válido.";
-            return;
-        }
-
+        $errors = [];
+        $formData = [];
         try {
-            if ($this->proveedorModel->create($data)) {
-                header('Location: ' . BASE_URL . '/public/index.php?controller=proveedor&action=index');
-                exit;
-            } else {
-                echo "Error al crear el proveedor.";
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new Exception("E006 Validación: Método no permitido.");
             }
+
+            $data = [
+                'nombre' => trim($_POST['nombre'] ?? ''),
+                'contacto' => trim($_POST['contacto'] ?? ''),
+                'email' => trim($_POST['email'] ?? '')
+            ];
+            $formData = $data;
+
+            if (empty($data['nombre']) || empty($data['contacto']) || empty($data['email'])) {
+                throw new Exception("E006 Validación: Todos los campos son obligatorios.");
+            }
+            if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+                throw new Exception("E006 Validación: El email no es válido.");
+            }
+
+            $this->proveedorModel->create($data);
+            header('Location: ' . BASE_URL . '/public/index.php?controller=proveedor&action=index');
+            exit;
         } catch (Exception $e) {
-            echo "Error: " . htmlspecialchars($e->getMessage());
+            $errors[] = $e->getMessage();
+            require_once dirname(__DIR__) . '/views/proveedores/create.php';
         }
     }
 
     public function edit($id) {
-        $proveedor = $this->proveedorModel->getById($id);
-        if ($proveedor) {
-            require_once dirname(__DIR__) . '/views/proveedores/edit.php';
-        } else {
-            echo "Proveedor no encontrado.";
+        $errors = [];
+        $proveedor = null;
+        $formData = $_POST ?: [];
+        try {
+            if (!filter_var($id, FILTER_VALIDATE_INT) || $id <= 0) {
+                throw new Exception("E006 Validación: El ID de proveedor no es válido.");
+            }
+            $proveedor = $this->proveedorModel->getById($id);
+            if (!$proveedor) {
+                throw new Exception("E002 Proveedores: Proveedor no encontrado.");
+            }
+            $formData = $formData ?: $proveedor;
+        } catch (Exception $e) {
+            $errors[] = $e->getMessage();
+            $proveedores = $this->proveedorModel->getAll();
+            require_once dirname(__DIR__) . '/views/proveedores/index.php';
+            return;
         }
+        require_once dirname(__DIR__) . '/views/proveedores/edit.php';
     }
 
     public function update() {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['id'])) {
-            echo "Método no permitido o ID no proporcionado.";
-            return;
-        }
-
-        $id = filter_var($_POST['id'], FILTER_VALIDATE_INT);
-        if ($id === false) {
-            echo "Error: ID inválido.";
-            return;
-        }
-
-        $data = [
-            'nombre' => trim($_POST['nombre'] ?? ''),
-            'contacto' => trim($_POST['contacto'] ?? ''),
-            'email' => trim($_POST['email'] ?? '')
-        ];
-
-        if (empty($data['nombre']) || empty($data['contacto']) || empty($data['email']) || !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-            echo "Error: Todos los campos son obligatorios y el email debe ser válido.";
-            return;
-        }
-
+        $errors = [];
+        $formData = [];
         try {
-            if ($this->proveedorModel->update($id, $data)) {
-                header('Location: ' . BASE_URL . '/public/index.php?controller=proveedor&action=index');
-                exit;
-            } else {
-                echo "Error al actualizar el proveedor.";
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new Exception("E006 Validación: Método no permitido.");
             }
+            $id = filter_var($_POST['id'] ?? 0, FILTER_VALIDATE_INT);
+            if ($id === false || $id <= 0) {
+                throw new Exception("E006 Validación: El ID de proveedor no es válido.");
+            }
+
+            $data = [
+                'nombre' => trim($_POST['nombre'] ?? ''),
+                'contacto' => trim($_POST['contacto'] ?? ''),
+                'email' => trim($_POST['email'] ?? '')
+            ];
+            $formData = $data;
+            $formData['id_proveedor'] = $id;
+
+            if (empty($data['nombre']) || empty($data['contacto']) || empty($data['email'])) {
+                throw new Exception("E006 Validación: Todos los campos son obligatorios.");
+            }
+            if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+                throw new Exception("E006 Validación: El email no es válido.");
+            }
+
+            $this->proveedorModel->update($id, $data);
+            header('Location: ' . BASE_URL . '/public/index.php?controller=proveedor&action=index');
+            exit;
         } catch (Exception $e) {
-            echo "Error: " . htmlspecialchars($e->getMessage());
+            $errors[] = $e->getMessage();
+            $proveedor = $formData;
+            require_once dirname(__DIR__) . '/views/proveedores/edit.php';
         }
     }
 
     public function delete($id) {
+        $errors = [];
         try {
-            if ($this->proveedorModel->delete($id)) {
-                header('Location: ' . BASE_URL . '/public/index.php?controller=proveedor&action=index');
-                exit;
-            } else {
-                header('Location: ' . BASE_URL . '/public/index.php?controller=proveedor&action=index&error=' . urlencode('Error al eliminar el proveedor.'));
-                exit;
+            if (!filter_var($id, FILTER_VALIDATE_INT) || $id <= 0) {
+                throw new Exception("E006 Validación: El ID de proveedor no es válido.");
             }
-        } catch (Exception $e) {
-            header('Location: ' . BASE_URL . '/public/index.php?controller=proveedor&action=index&error=' . urlencode($e->getMessage()));
+            $this->proveedorModel->delete($id);
+            header('Location: ' . BASE_URL . '/public/index.php?controller=proveedor&action=index');
             exit;
+        } catch (Exception $e) {
+            $errors[] = $e->getMessage();
+            $proveedores = $this->proveedorModel->getAll();
+            require_once dirname(__DIR__) . '/views/proveedores/index.php';
         }
     }
 }
