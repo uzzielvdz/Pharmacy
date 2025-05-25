@@ -9,7 +9,13 @@ class OrdenCompraController {
     }
 
     public function index() {
-        $ordenes = $this->ordenModel->getAll();
+        $errors = [];
+        try {
+            $ordenes = $this->ordenModel->getAll();
+        } catch (Exception $e) {
+            $errors[] = "Error al cargar órdenes: " . htmlspecialchars($e->getMessage());
+            $ordenes = [];
+        }
         require_once dirname(__DIR__) . '/views/ordenes/index.php';
     }
 

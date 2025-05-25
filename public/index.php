@@ -2,6 +2,7 @@
 require_once dirname(__DIR__) . '/controllers/ProductController.php';
 require_once dirname(__DIR__) . '/controllers/ProveedorController.php';
 require_once dirname(__DIR__) . '/controllers/MovimientoStockController.php';
+require_once dirname(__DIR__) . '/controllers/OrdenCompraController.php';
 
 $controller = filter_input(INPUT_GET, 'controller', FILTER_SANITIZE_STRING) ?? 'product';
 $action = filter_input(INPUT_GET, 'action', FILTER_SANITIZE_STRING) ?? 'index';
@@ -84,19 +85,38 @@ try {
             case 'store':
                 $controllerInstance->store();
                 break;
-            case 'edit':
+            case 'delete':
                 if ($id) {
-                    $controllerInstance->edit($id);
+                    $controllerInstance->delete($id);
                 } else {
                     throw new Exception("ID inválido");
                 }
                 break;
-            case 'update':
-                $controllerInstance->update();
+            default:
+                $controllerInstance->index();
+        }
+    } elseif ($controller === 'orden') {
+        $controllerInstance = new OrdenCompraController();
+        switch ($action) {
+            case 'index':
+                $controllerInstance->index();
                 break;
-            case 'delete':
+            case 'create':
+                $controllerInstance->create();
+                break;
+            case 'store':
+                $controllerInstance->store();
+                break;
+            case 'completar':
                 if ($id) {
-                    $controllerInstance->delete($id);
+                    $controllerInstance->completar($id);
+                } else {
+                    throw new Exception("ID inválido");
+                }
+                break;
+            case 'cancelar':
+                if ($id) {
+                    $controllerInstance->cancelar($id);
                 } else {
                     throw new Exception("ID inválido");
                 }
