@@ -1,18 +1,20 @@
 <?php
-require_once dirname(__DIR__) . '/config/config.php';
-require_once ROOT_PATH . '/config/database.php';
+if (!defined('ROOT_PATH')) {
+    require_once dirname(__DIR__) . '/config/config.php';
+}
+if (!function_exists('getConnection')) {
+    require_once ROOT_PATH . '/config/database.php';
+}
 require_once ROOT_PATH . '/models/MovimientoStock.php';
 
 class OrdenCompra {
     private $conn;
-    private $movimientoModel;
 
     public function __construct() {
         try {
             $this->conn = getConnection();
-            $this->movimientoModel = new MovimientoStock();
         } catch (Exception $e) {
-            die("Error en la conexión: " . $e->getMessage());
+            die("No se pudo conectar a la base de datos: " . $e->getMessage());
         }
     }
 
@@ -22,7 +24,7 @@ class OrdenCompra {
                 JOIN Proveedores p ON oc.id_proveedor = p.id_proveedor";
         $result = $this->conn->query($sql);
         if (!$result) {
-            throw new Exception("Error en la consulta: " . $this->conn->error);
+            throw new Exception("No se pudo obtener la lista de órdenes: " . $this->conn->error);
         }
         return $result->fetch_all(MYSQLI_ASSOC);
     }
@@ -34,10 +36,13 @@ class OrdenCompra {
                     VALUES (?, ?, 'pendiente', ?)";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
-                throw new Exception("Error preparando consulta: " . $this->conn->error);
+                throw new Exception("Error al preparar la consulta para crear la orden.");
             }
             $stmt->bind_param("isd", $data['id_proveedor'], $data['fecha_orden'], $data['total']);
-            $stmt->execute();
+            $result = $stmt->execute();
+            if (!$result) {
+                throw new Exception("No se pudo crear la orden: " . $stmt->error);
+            }
             $id_orden = $this->conn->insert_id;
             $stmt->close();
 
@@ -46,10 +51,13 @@ class OrdenCompra {
                         VALUES (?, ?, ?, ?)";
                 $stmt = $this->conn->prepare($sql);
                 if (!$stmt) {
-                    throw new Exception("Error preparando consulta: " . $this->conn->error);
+                    throw new Exception("Error al preparar la consulta para los detalles.");
                 }
                 $stmt->bind_param("iiid", $id_orden, $detalle['id_producto'], $detalle['cantidad'], $detalle['precio_unitario']);
-                $stmt->execute();
+                $result = $stmt->execute();
+                if (!$result) {
+                    throw new Exception("No se pudo guardar el detalle: " . $stmt->error);
+                }
                 $stmt->close();
             }
 
@@ -70,7 +78,6 @@ class OrdenCompra {
             $stmt->execute();
             $result = $stmt->get_result()->fetch_assoc();
             $stmt->close();
-
             if (!$result) {
                 throw new Exception("Orden no encontrada.");
             }
@@ -78,13 +85,16 @@ class OrdenCompra {
                 throw new Exception("La orden no está pendiente.");
             }
 
-            $sql = "SELECT id_producto, cantidad FROM DetallesOrdenCompra WHERE id_orden = ?";
+            $sql = "SELECT doc.id_producto, doc.cantidad 
+                    FROM DetallesOrdenCompra doc 
+                    WHERE doc.id_orden = ?";
             $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("i", $id);
             $stmt->execute();
             $detalles = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             $stmt->close();
 
+            $movimientoStock = new MovimientoStock();
             foreach ($detalles as $detalle) {
                 $movimientoData = [
                     'id_producto' => $detalle['id_producto'],
@@ -93,13 +103,16 @@ class OrdenCompra {
                     'fecha' => date('Y-m-d H:i:s'),
                     'motivo' => 'Orden de compra #' . $id
                 ];
-                $this->movimientoModel->create($movimientoData);
+                $movimientoStock->create($movimientoData);
             }
 
             $sql = "UPDATE OrdenesCompra SET estado = 'completada' WHERE id_orden = ?";
             $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("i", $id);
-            $stmt->execute();
+            $result = $stmt->execute();
+            if (!$result) {
+                throw new Exception("No se pudo completar la orden: " . $stmt->error);
+            }
             $stmt->close();
 
             $this->conn->commit();
@@ -111,19 +124,74 @@ class OrdenCompra {
     }
 
     public function cancelar($id) {
-        $sql = "UPDATE OrdenesCompra SET estado = 'cancelada' WHERE id_orden = ?";
+        $sql = "UPDATE OrdenesCompra SET estado = 'cancelada' WHERE id_orden = ? AND estado = 'pendiente'";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $id);
-        $stmt->execute();
+        $result = $stmt->execute();
+        if (!$result) {
+            throw new Exception("No se pudo cancelar la orden: " . $stmt->error);
+        }
+        if ($stmt->affected_rows === 0) {
+            throw new Exception("La orden no está pendiente o no existe.");
+        }
         $stmt->close();
         return true;
+    }
+
+    public function delete($id) {
+        $this->conn->begin_transaction();
+        try {
+            // Verificar si la orden tiene movimientos asociados
+            $sql = "SELECT COUNT(*) AS count 
+                    FROM MovimientosStock m 
+                    JOIN DetallesOrdenCompra doc ON m.id_producto = doc.id_producto 
+                    WHERE doc.id_orden = ? AND m.motivo LIKE ?";
+            $motivo = "Orden de compra #$id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("is", $id, $motivo);
+            $stmt->execute();
+            $result = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+            if ($result['count'] > 0) {
+                throw new Exception("No se puede eliminar la orden porque tiene movimientos de stock asociados.");
+            }
+
+            // Eliminar detalles
+            $sql = "DELETE FROM DetallesOrdenCompra WHERE id_orden = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("i", $id);
+            $result = $stmt->execute();
+            if (!$result) {
+                throw new Exception("No se pudo eliminar los detalles de la orden: " . $stmt->error);
+            }
+            $stmt->close();
+
+            // Eliminar orden
+            $sql = "DELETE FROM OrdenesCompra WHERE id_orden = ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("i", $id);
+            $result = $stmt->execute();
+            if (!$result) {
+                throw new Exception("No se pudo eliminar la orden: " . $stmt->error);
+            }
+            if ($stmt->affected_rows === 0) {
+                throw new Exception("La orden no existe.");
+            }
+            $stmt->close();
+
+            $this->conn->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->conn->rollback();
+            throw $e;
+        }
     }
 
     public function getProveedores() {
         $sql = "SELECT id_proveedor, nombre FROM Proveedores";
         $result = $this->conn->query($sql);
         if (!$result) {
-            throw new Exception("Error en la consulta: " . $this->conn->error);
+            throw new Exception("No se pudo obtener la lista de proveedores: " . $this->conn->error);
         }
         return $result->fetch_all(MYSQLI_ASSOC);
     }
@@ -132,7 +200,7 @@ class OrdenCompra {
         $sql = "SELECT id_producto, nombre FROM Productos";
         $result = $this->conn->query($sql);
         if (!$result) {
-            throw new Exception("Error en la consulta: " . $this->conn->error);
+            throw new Exception("No se pudo obtener la lista de productos: " . $this->conn->error);
         }
         return $result->fetch_all(MYSQLI_ASSOC);
     }
