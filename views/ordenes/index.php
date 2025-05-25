@@ -35,6 +35,7 @@
                         <a href="<?php echo BASE_URL; ?>/public/index.php?controller=orden&action=completar&id=<?php echo $orden['id_orden']; ?>" onclick="return confirm('¿Completar esta orden?');">Completar</a>
                         <a href="<?php echo BASE_URL; ?>/public/index.php?controller=orden&action=cancelar&id=<?php echo $orden['id_orden']; ?>" onclick="return confirm('¿Cancelar esta orden?');">Cancelar</a>
                     <?php endif; ?>
+                    <a href="<?php echo BASE_URL; ?>/public/index.php?controller=orden&action=delete&id=<?php echo $orden['id_orden']; ?>" onclick="return confirm('¿Eliminar esta orden?');">Eliminar</a>
                 </td>
             </tr>
         <?php endforeach; ?>
