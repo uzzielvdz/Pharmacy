@@ -91,5 +91,18 @@ class OrdenCompraController {
             require_once dirname(__DIR__) . '/views/ordenes/index.php';
         }
     }
+
+    public function delete($id) {
+        $errors = [];
+        try {
+            $this->ordenModel->delete($id);
+            header('Location: ' . BASE_URL . '/public/index.php?controller=orden&action=index');
+            exit;
+        } catch (Exception $e) {
+            $errors[] = "Error: " . htmlspecialchars($e->getMessage());
+            $ordenes = $this->ordenModel->getAll();
+            require_once dirname(__DIR__) . '/views/ordenes/index.php';
+        }
+    }
 }
 ?>
