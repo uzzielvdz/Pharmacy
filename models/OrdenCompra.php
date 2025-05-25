@@ -14,7 +14,7 @@ class OrdenCompra {
         try {
             $this->conn = getConnection();
         } catch (Exception $e) {
-            die("No se pudo conectar a la base de datos: " . $e->getMessage());
+            throw new Exception("E005 Base de Datos: No se pudo conectar a la base de datos. Por favor, intenta de nuevo.");
         }
     }
 
@@ -24,7 +24,7 @@ class OrdenCompra {
                 JOIN Proveedores p ON oc.id_proveedor = p.id_proveedor";
         $result = $this->conn->query($sql);
         if (!$result) {
-            throw new Exception("No se pudo obtener la lista de órdenes: " . $this->conn->error);
+            throw new Exception("E005 Base de Datos: No se pudo obtener la lista de órdenes.");
         }
         return $result->fetch_all(MYSQLI_ASSOC);
     }
@@ -36,12 +36,12 @@ class OrdenCompra {
                     VALUES (?, ?, 'pendiente', ?)";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
-                throw new Exception("Error al preparar la consulta para crear la orden.");
+                throw new Exception("E005 Base de Datos: Error al preparar la consulta para crear la orden.");
             }
             $stmt->bind_param("isd", $data['id_proveedor'], $data['fecha_orden'], $data['total']);
             $result = $stmt->execute();
             if (!$result) {
-                throw new Exception("No se pudo crear la orden: " . $stmt->error);
+                throw new Exception("E005 Base de Datos: No se pudo crear la orden.");
             }
             $id_orden = $this->conn->insert_id;
             $stmt->close();
@@ -51,12 +51,12 @@ class OrdenCompra {
                         VALUES (?, ?, ?, ?)";
                 $stmt = $this->conn->prepare($sql);
                 if (!$stmt) {
-                    throw new Exception("Error al preparar la consulta para los detalles.");
+                    throw new Exception("E005 Base de Datos: Error al preparar la consulta para los detalles.");
                 }
                 $stmt->bind_param("iiid", $id_orden, $detalle['id_producto'], $detalle['cantidad'], $detalle['precio_unitario']);
                 $result = $stmt->execute();
                 if (!$result) {
-                    throw new Exception("No se pudo guardar el detalle: " . $stmt->error);
+                    throw new Exception("E005 Base de Datos: No se pudo guardar el detalle de la orden.");
                 }
                 $stmt->close();
             }
@@ -79,10 +79,10 @@ class OrdenCompra {
             $result = $stmt->get_result()->fetch_assoc();
             $stmt->close();
             if (!$result) {
-                throw new Exception("Orden no encontrada.");
+                throw new Exception("E004 Órdenes: La orden no existe.");
             }
             if ($result['estado'] !== 'pendiente') {
-                throw new Exception("La orden no está pendiente.");
+                throw new Exception("E004 Órdenes: La orden no está en estado pendiente.");
             }
 
             $sql = "SELECT doc.id_producto, doc.cantidad 
@@ -111,7 +111,7 @@ class OrdenCompra {
             $stmt->bind_param("i", $id);
             $result = $stmt->execute();
             if (!$result) {
-                throw new Exception("No se pudo completar la orden: " . $stmt->error);
+                throw new Exception("E005 Base de Datos: No se pudo completar la orden.");
             }
             $stmt->close();
 
@@ -129,10 +129,10 @@ class OrdenCompra {
         $stmt->bind_param("i", $id);
         $result = $stmt->execute();
         if (!$result) {
-            throw new Exception("No se pudo cancelar la orden: " . $stmt->error);
+            throw new Exception("E005 Base de Datos: No se pudo cancelar la orden.");
         }
         if ($stmt->affected_rows === 0) {
-            throw new Exception("La orden no está pendiente o no existe.");
+            throw new Exception("E004 Órdenes: La orden no está en estado pendiente o no existe.");
         }
         $stmt->close();
         return true;
@@ -141,7 +141,6 @@ class OrdenCompra {
     public function delete($id) {
         $this->conn->begin_transaction();
         try {
-            // Verificar si la orden tiene movimientos asociados
             $sql = "SELECT COUNT(*) AS count 
                     FROM MovimientosStock m 
                     JOIN DetallesOrdenCompra doc ON m.id_producto = doc.id_producto 
@@ -153,29 +152,27 @@ class OrdenCompra {
             $result = $stmt->get_result()->fetch_assoc();
             $stmt->close();
             if ($result['count'] > 0) {
-                throw new Exception("No se puede eliminar la orden porque tiene movimientos de stock asociados.");
+                throw new Exception("E004 Órdenes: No se puede eliminar la orden porque tiene movimientos de stock asociados.");
             }
 
-            // Eliminar detalles
             $sql = "DELETE FROM DetallesOrdenCompra WHERE id_orden = ?";
             $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("i", $id);
             $result = $stmt->execute();
             if (!$result) {
-                throw new Exception("No se pudo eliminar los detalles de la orden: " . $stmt->error);
+                throw new Exception("E005 Base de Datos: No se pudo eliminar los detalles de la orden.");
             }
             $stmt->close();
 
-            // Eliminar orden
             $sql = "DELETE FROM OrdenesCompra WHERE id_orden = ?";
             $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("i", $id);
             $result = $stmt->execute();
             if (!$result) {
-                throw new Exception("No se pudo eliminar la orden: " . $stmt->error);
+                throw new Exception("E005 Base de Datos: No se pudo eliminar la orden.");
             }
             if ($stmt->affected_rows === 0) {
-                throw new Exception("La orden no existe.");
+                throw new Exception("E004 Órdenes: La orden no existe.");
             }
             $stmt->close();
 
@@ -191,7 +188,7 @@ class OrdenCompra {
         $sql = "SELECT id_proveedor, nombre FROM Proveedores";
         $result = $this->conn->query($sql);
         if (!$result) {
-            throw new Exception("No se pudo obtener la lista de proveedores: " . $this->conn->error);
+            throw new Exception("E005 Base de Datos: No se pudo obtener la lista de proveedores.");
         }
         return $result->fetch_all(MYSQLI_ASSOC);
     }
@@ -200,7 +197,7 @@ class OrdenCompra {
         $sql = "SELECT id_producto, nombre FROM Productos";
         $result = $this->conn->query($sql);
         if (!$result) {
-            throw new Exception("No se pudo obtener la lista de productos: " . $this->conn->error);
+            throw new Exception("E005 Base de Datos: No se pudo obtener la lista de productos.");
         }
         return $result->fetch_all(MYSQLI_ASSOC);
     }
