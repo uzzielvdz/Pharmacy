@@ -20,7 +20,7 @@
             @apply bg-gray-800 text-gray-100;
         }
         .navbar {
-            @apply bg-blue-900;
+            @apply bg-blue-900 shadow-lg;
         }
         .table thead {
             @apply bg-blue-900 text-white;
@@ -51,33 +51,135 @@
             from { transform: translateY(20px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
+        .nav-link {
+            @apply relative text-blue-100 hover:text-white;
+        }
+        .nav-link::after {
+            content: '';
+            @apply absolute bottom-0 left-0 w-0 h-0.5 bg-blue-400 transition-all duration-300;
+        }
+        .nav-link:hover::after {
+            @apply w-full;
+        }
+        .navbar-brand {
+            @apply flex items-center space-x-2 text-xl font-semibold text-white hover:text-blue-200;
+        }
+        .notification-badge {
+            @apply absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center;
+        }
+        .dropdown-menu {
+            @apply bg-blue-900 border border-blue-800;
+        }
+        .dropdown-item {
+            @apply text-blue-100 hover:bg-blue-800;
+        }
+        .dropdown-divider {
+            @apply border-blue-800;
+        }
+        .btn-link {
+            @apply text-blue-100 hover:text-white;
+        }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
         <div class="container">
-            <a class="navbar-brand" href="<?php echo BASE_URL; ?>/public/index.php">Farmacia</a>
+            <a class="navbar-brand" href="<?php echo BASE_URL; ?>/public/index.php">
+                <i class="bi bi-capsule text-blue-300"></i>
+                <span>Farmacia</span>
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
+                <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="<?php echo BASE_URL; ?>/public/index.php?controller=product&action=index">Productos</a>
+                        <a class="nav-link" href="<?php echo BASE_URL; ?>/public/index.php?controller=product&action=index">
+                            <i class="bi bi-box me-1"></i>Productos
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="<?php echo BASE_URL; ?>/public/index.php?controller=proveedor&action=index">Proveedores</a>
+                        <a class="nav-link" href="<?php echo BASE_URL; ?>/public/index.php?controller=proveedor&action=index">
+                            <i class="bi bi-truck me-1"></i>Proveedores
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="<?php echo BASE_URL; ?>/public/index.php?controller=movimiento&action=index">Movimientos</a>
+                        <a class="nav-link" href="<?php echo BASE_URL; ?>/public/index.php?controller=movimiento&action=index">
+                            <i class="bi bi-arrow-left-right me-1"></i>Movimientos
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="<?php echo BASE_URL; ?>/public/index.php?controller=orden&action=index">Órdenes</a>
+                        <a class="nav-link" href="<?php echo BASE_URL; ?>/public/index.php?controller=orden&action=index">
+                            <i class="bi bi-cart me-1"></i>Órdenes
+                        </a>
                     </li>
                 </ul>
-                <button id="theme-toggle" class="btn btn-secondary ms-3">
-                    <i class="bi bi-moon-stars-fill"></i>
-                </button>
+                <div class="d-flex align-items-center">
+                    <!-- Reportes -->
+                    <div class="dropdown me-3">
+                        <button class="btn btn-link" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-graph-up me-1"></i>Reportes
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end">
+                            <h6 class="dropdown-header text-white">Reportes</h6>
+                            <a class="dropdown-item" href="#">
+                                <i class="bi bi-graph-up me-2"></i>Stock Bajo
+                            </a>
+                            <a class="dropdown-item" href="#">
+                                <i class="bi bi-calendar-check me-2"></i>Por Vencer
+                            </a>
+                            <a class="dropdown-item" href="#">
+                                <i class="bi bi-cart me-2"></i>Ventas
+                            </a>
+                            <a class="dropdown-item" href="#">
+                                <i class="bi bi-file-earmark-text me-2"></i>Auditoría
+                            </a>
+                        </div>
+                    </div>
+                    <!-- Notificaciones -->
+                    <div class="position-relative me-3">
+                        <button class="btn btn-link position-relative" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-bell-fill"></i>
+                            <span class="notification-badge">3</span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end">
+                            <h6 class="dropdown-header text-white">Notificaciones</h6>
+                            <a class="dropdown-item" href="#">
+                                <small class="text-blue-300">Stock Bajo</small>
+                                <p class="mb-0">5 productos con stock bajo</p>
+                            </a>
+                            <a class="dropdown-item" href="#">
+                                <small class="text-yellow-400">Por Vencer</small>
+                                <p class="mb-0">3 productos próximos a vencer</p>
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item text-center text-blue-300" href="#">Ver todas</a>
+                        </div>
+                    </div>
+                    <!-- Usuario -->
+                    <div class="dropdown me-3">
+                        <button class="btn btn-link" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle me-1"></i>Usuario
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end">
+                            <h6 class="dropdown-header text-white">Mi Cuenta</h6>
+                            <a class="dropdown-item" href="#">
+                                <i class="bi bi-person me-2"></i>Perfil
+                            </a>
+                            <a class="dropdown-item" href="#">
+                                <i class="bi bi-gear me-2"></i>Configuración
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item text-red-400" href="#">
+                                <i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión
+                            </a>
+                        </div>
+                    </div>
+                    <!-- Tema -->
+                    <button id="theme-toggle" class="btn btn-secondary">
+                        <i class="bi bi-moon-stars-fill"></i>
+                    </button>
+                </div>
             </div>
         </div>
     </nav>
