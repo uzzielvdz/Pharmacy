@@ -144,19 +144,45 @@ class ProveedorController {
     }
 
     public function delete($id) {
-        $errors = [];
         try {
             if (!filter_var($id, FILTER_VALIDATE_INT) || $id <= 0) {
                 throw new Exception("E006 Validación: El ID de proveedor no es válido.");
             }
-            $this->proveedorModel->delete($id);
-            setFlash('Proveedor eliminado exitosamente', 'success');
-            redirect('proveedor');
+
+            // Verificar si el proveedor tiene productos asociados
+            $productos = $this->proveedorModel->getProductosByProveedor($id);
+            if (!empty($productos)) {
+                throw new Exception("No se puede eliminar el proveedor porque tiene productos asociados.");
+            }
+
+            // Verificar si el proveedor tiene órdenes de compra asociadas
+            $ordenes = $this->proveedorModel->getOrdenesByProveedor($id);
+            if (!empty($ordenes)) {
+                throw new Exception("No se puede eliminar el proveedor porque tiene órdenes de compra asociadas.");
+            }
+
+            if ($this->proveedorModel->delete($id)) {
+                if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => true]);
+                    exit;
+                }
+                setFlash('Proveedor eliminado exitosamente', 'success');
+            } else {
+                throw new Exception("Error al eliminar el proveedor.");
+            }
         } catch (Exception $e) {
+            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+                exit;
+            }
             $errors[] = $e->getMessage();
             $proveedores = $this->proveedorModel->getAll();
             require_once VIEWS_PATH . '/proveedores/index.php';
+            return;
         }
+        redirect('proveedor');
     }
 }
 ?>

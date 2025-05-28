@@ -56,7 +56,8 @@ class ProductController {
                 'precio' => filter_var($_POST['precio'] ?? 0, FILTER_VALIDATE_FLOAT),
                 'fecha_caducidad' => trim($_POST['fecha_caducidad'] ?? ''),
                 'lote' => trim($_POST['lote'] ?? ''),
-                'id_proveedor' => filter_var($_POST['id_proveedor'] ?? 0, FILTER_VALIDATE_INT)
+                'id_proveedor' => filter_var($_POST['id_proveedor'] ?? 0, FILTER_VALIDATE_INT),
+                'categoria' => trim($_POST['categoria'] ?? 'medicamentos')
             ];
             $formData = $data;
 
@@ -74,6 +75,22 @@ class ProductController {
             }
             if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['fecha_caducidad'])) {
                 throw new Exception("E006 Validación: La fecha de caducidad no es válida.");
+            }
+
+            // Manejar la imagen si se subió una
+            if (isset($_FILES['imagen']) && $_FILES['imagen']['error'] === UPLOAD_ERR_OK) {
+                $uploadDir = PUBLIC_PATH . '/img/products/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0777, true);
+                }
+
+                $fileExtension = strtolower(pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION));
+                $newFileName = uniqid() . '.' . $fileExtension;
+                $uploadFile = $uploadDir . $newFileName;
+
+                if (move_uploaded_file($_FILES['imagen']['tmp_name'], $uploadFile)) {
+                    $data['imagen'] = $newFileName;
+                }
             }
 
             $id_producto = $this->productModel->create($data);
@@ -136,18 +153,32 @@ class ProductController {
                 throw new Exception("E006 Validación: ID de producto no válido.");
             }
 
+            // Validar datos
+            if (empty($_POST['nombre'])) {
+                throw new Exception("E006 Validación: El nombre del producto es obligatorio.");
+            }
+            if (!filter_var($_POST['precio'], FILTER_VALIDATE_FLOAT) || $_POST['precio'] <= 0) {
+                throw new Exception("E006 Validación: El precio debe ser un número positivo.");
+            }
+            if (!filter_var($_POST['stock'], FILTER_VALIDATE_INT) || $_POST['stock'] < 0) {
+                throw new Exception("E006 Validación: El stock debe ser un número no negativo.");
+            }
+            if (!filter_var($_POST['id_proveedor'], FILTER_VALIDATE_INT) || $_POST['id_proveedor'] <= 0) {
+                throw new Exception("E006 Validación: Por favor, selecciona un proveedor válido.");
+            }
+
             $data = [
-                'nombre' => trim($_POST['nombre'] ?? ''),
+                'nombre' => trim($_POST['nombre']),
                 'descripcion' => trim($_POST['descripcion'] ?? ''),
-                'precio' => filter_var($_POST['precio'] ?? 0, FILTER_VALIDATE_FLOAT),
+                'precio' => filter_var($_POST['precio'], FILTER_VALIDATE_FLOAT),
                 'fecha_caducidad' => trim($_POST['fecha_caducidad'] ?? ''),
                 'lote' => trim($_POST['lote'] ?? ''),
-                'stock' => filter_var($_POST['stock'] ?? 0, FILTER_VALIDATE_INT),
+                'stock' => filter_var($_POST['stock'], FILTER_VALIDATE_INT),
                 'categoria' => trim($_POST['categoria'] ?? 'medicamentos'),
-                'id_proveedor' => filter_var($_POST['id_proveedor'] ?? 0, FILTER_VALIDATE_INT)
+                'id_proveedor' => filter_var($_POST['id_proveedor'], FILTER_VALIDATE_INT)
             ];
 
-            // Manejar la imagen si se subió una nueva
+            // Manejar la imagen
             if (isset($_FILES['imagen']) && $_FILES['imagen']['error'] === UPLOAD_ERR_OK) {
                 $uploadDir = PUBLIC_PATH . '/img/products/';
                 if (!is_dir($uploadDir)) {
@@ -155,16 +186,36 @@ class ProductController {
                 }
 
                 $fileExtension = strtolower(pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION));
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
+                
+                if (!in_array($fileExtension, $allowedExtensions)) {
+                    throw new Exception("E006 Validación: Solo se permiten imágenes en formato JPG, JPEG, PNG o GIF.");
+                }
+
                 $newFileName = uniqid() . '.' . $fileExtension;
                 $uploadFile = $uploadDir . $newFileName;
 
                 if (move_uploaded_file($_FILES['imagen']['tmp_name'], $uploadFile)) {
+                    // Eliminar la imagen anterior si existe
+                    if (isset($_POST['imagen_actual']) && !empty($_POST['imagen_actual'])) {
+                        $oldImagePath = $uploadDir . $_POST['imagen_actual'];
+                        if (file_exists($oldImagePath)) {
+                            unlink($oldImagePath);
+                        }
+                    }
                     $data['imagen'] = $newFileName;
+                } else {
+                    throw new Exception("E006 Validación: Error al subir la imagen.");
                 }
+            } elseif (isset($_POST['imagen_actual'])) {
+                // Mantener la imagen actual si no se subió una nueva
+                $data['imagen'] = $_POST['imagen_actual'];
             }
 
+            // Actualizar el producto
             if ($this->productModel->update($id, $data)) {
-                setFlash('success', 'Producto actualizado correctamente');
+                setFlash('Producto actualizado correctamente', 'success');
+                redirect('products');
             } else {
                 throw new Exception("Error al actualizar el producto.");
             }
@@ -176,8 +227,8 @@ class ProductController {
                 require_once VIEWS_PATH . '/products/edit.php';
                 return;
             }
+            redirect('products');
         }
-        redirect('products');
     }
 
     public function delete($id) {

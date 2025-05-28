@@ -160,19 +160,42 @@ class MovimientoStockController {
     }
 
     public function delete($id) {
-        $errors = [];
         try {
             if (!filter_var($id, FILTER_VALIDATE_INT) || $id <= 0) {
                 throw new Exception("E006 Validación: El ID de movimiento no es válido.");
             }
-            $this->movimientoModel->delete($id);
-            setFlash('Movimiento eliminado exitosamente', 'success');
-            redirect('movimiento');
+
+            // Verificar si el movimiento existe
+            $movimiento = $this->movimientoModel->getById($id);
+            if (!$movimiento) {
+                throw new Exception("E003 Movimientos: Movimiento no encontrado.");
+            }
+
+            // Verificar si el movimiento está asociado a una orden de compra
+            if (strpos($movimiento['motivo'], 'Orden de compra #') === 0) {
+                throw new Exception("E003 Movimientos: No se puede eliminar un movimiento asociado a una orden de compra.");
+            }
+
+            // Eliminar el movimiento
+            if ($this->movimientoModel->delete($id)) {
+                if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => true, 'message' => 'Movimiento eliminado exitosamente']);
+                    exit;
+                }
+                setFlash('Movimiento eliminado exitosamente', 'success');
+            } else {
+                throw new Exception("Error al eliminar el movimiento.");
+            }
         } catch (Exception $e) {
-            $errors[] = $e->getMessage();
-            $movimientos = $this->movimientoModel->getAll();
-            require_once VIEWS_PATH . '/movimientos/index.php';
+            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+                exit;
+            }
+            setFlash($e->getMessage(), 'danger');
         }
+        redirect('movimiento');
     }
 }
 ?>
