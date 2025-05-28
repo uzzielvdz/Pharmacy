@@ -17,6 +17,9 @@ ob_start();
         <div class="card-body">
             <form action="<?= url('product/update') ?>" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="id" value="<?= $product['id_producto'] ?>">
+                <?php if (isset($product['imagen'])): ?>
+                    <input type="hidden" name="imagen_actual" value="<?= $product['imagen'] ?>">
+                <?php endif; ?>
                 
                 <div class="row">
                     <div class="col-md-6 mb-3">
@@ -59,32 +62,35 @@ ob_start();
                     </div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Proveedor</label>
-                    <select class="form-select" name="id_proveedor" required>
-                        <option value="">Seleccionar proveedor</option>
-                        <?php foreach ($proveedores as $proveedor): ?>
-                            <option value="<?= $proveedor['id_proveedor'] ?>" <?= $product['id_proveedor'] == $proveedor['id_proveedor'] ? 'selected' : '' ?>>
-                                <?= $proveedor['nombre'] ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Proveedor</label>
+                        <select class="form-select" name="id_proveedor" required>
+                            <option value="">Seleccionar proveedor</option>
+                            <?php foreach ($proveedores as $proveedor): ?>
+                                <option value="<?= $proveedor['id_proveedor'] ?>" <?= $product['id_proveedor'] == $proveedor['id_proveedor'] ? 'selected' : '' ?>>
+                                    <?= $proveedor['nombre'] ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Imagen</label>
+                        <?php if (isset($product['imagen']) && $product['imagen']): ?>
+                            <div class="mb-2">
+                                <img src="<?= asset('img/products/' . $product['imagen']) ?>" alt="Imagen actual" class="img-thumbnail" style="max-height: 100px;">
+                            </div>
+                        <?php endif; ?>
+                        <input type="file" class="form-control" name="imagen" accept="image/*">
+                        <small class="form-text text-muted">Deja vacío para mantener la imagen actual</small>
+                    </div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Descripción</label>
-                    <textarea class="form-control" name="descripcion" rows="3"><?= $product['descripcion'] ?></textarea>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Imagen del Producto</label>
-                    <?php if ($product['imagen']): ?>
-                        <div class="mb-2">
-                            <img src="<?= asset('img/products/' . $product['imagen']) ?>" alt="Imagen actual" class="img-thumbnail" width="100">
-                        </div>
-                    <?php endif; ?>
-                    <input type="file" class="form-control" name="imagen" accept="image/*">
-                    <small class="text-muted">Deja vacío para mantener la imagen actual</small>
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <label class="form-label">Descripción</label>
+                        <textarea class="form-control" name="descripcion" rows="3"><?= $product['descripcion'] ?></textarea>
+                    </div>
                 </div>
 
                 <div class="text-end">

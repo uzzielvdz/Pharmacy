@@ -69,69 +69,117 @@ ob_start();
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($movimientos as $movimiento): ?>
-                        <tr>
-                            <td><?= $movimiento['id_movimiento'] ?></td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <img src="<?= asset('img/products/' . ($movimiento['imagen'] ?? 'default.jpg')) ?>" 
-                                         alt="<?= $movimiento['nombre_producto'] ?>" 
-                                         class="rounded-circle me-2" width="32" height="32">
-                                    <?= $movimiento['nombre_producto'] ?>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="badge bg-<?= $movimiento['tipo'] === 'entrada' ? 'success' : 
-                                    ($movimiento['tipo'] === 'salida' ? 'danger' : 'warning') ?>">
-                                    <?= ucfirst($movimiento['tipo']) ?>
-                                </span>
-                            </td>
-                            <td><?= $movimiento['cantidad'] ?></td>
-                            <td><?= date('d/m/Y H:i', strtotime($movimiento['fecha'])) ?></td>
-                            <td><?= $movimiento['motivo'] ?></td>
-                            <td>
-                                <div class="btn-group">
-                                    <a href="index.php?controller=movimiento&action=view&id=<?= $movimiento['id_movimiento'] ?>" 
-                                       class="btn btn-sm btn-outline-info"
-                                       data-bs-toggle="tooltip" title="Ver detalles">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    <?php if ($movimiento['tipo'] === 'ajuste'): ?>
-                                    <button type="button" 
-                                            class="btn btn-sm btn-outline-danger" 
-                                            onclick="if(confirm('¿Estás seguro de que deseas eliminar este movimiento?')) { 
-                                                fetch('index.php?controller=movimiento&action=delete&id=<?= $movimiento['id_movimiento'] ?>', {
-                                                    method: 'POST',
-                                                    headers: {
-                                                        'X-Requested-With': 'XMLHttpRequest'
-                                                    }
-                                                })
-                                                .then(response => response.json())
-                                                .then(data => {
-                                                    if (data.success) {
-                                                        window.location.reload();
-                                                    } else {
-                                                        alert('Error al eliminar el movimiento: ' + data.message);
-                                                    }
-                                                })
-                                                .catch(error => {
-                                                    console.error('Error:', error);
-                                                    alert('Error al eliminar el movimiento');
-                                                });
-                                            }"
-                                            data-bs-toggle="tooltip" title="Eliminar">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                    <?php endif; ?>
-                                </div>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
+                        <?php if (!empty($movimientos)): ?>
+                            <?php foreach ($movimientos as $movimiento): ?>
+                                <tr>
+                                    <td><?= $movimiento['id_movimiento'] ?></td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <img src="<?= asset('img/products/' . ($movimiento['imagen'] ?? 'default.jpg')) ?>" 
+                                                 alt="<?= $movimiento['nombre_producto'] ?>" 
+                                                 class="rounded-circle me-2" width="32" height="32">
+                                            <?= $movimiento['nombre_producto'] ?>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-<?= $movimiento['tipo'] === 'entrada' ? 'success' : 'danger' ?>">
+                                            <?= ucfirst($movimiento['tipo']) ?>
+                                        </span>
+                                    </td>
+                                    <td><?= $movimiento['cantidad'] ?></td>
+                                    <td><?= date('d/m/Y H:i', strtotime($movimiento['fecha'])) ?></td>
+                                    <td><?= $movimiento['motivo'] ?></td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="<?= url('movimiento/edit/' . $movimiento['id_movimiento']) ?>" 
+                                               class="btn btn-sm btn-primary">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-danger delete-movimiento" 
+                                                    data-id="<?= $movimiento['id_movimiento'] ?>"
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#deleteMovimientoModal">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="7" class="text-center">No hay movimientos registrados</td>
+                            </tr>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteMovimientoModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar Eliminación</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Estás seguro de que deseas eliminar este movimiento? Esta acción no se puede deshacer.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <form id="deleteMovimientoForm" action="" method="POST">
+                        <input type="hidden" name="_method" value="DELETE">
+                        <input type="hidden" name="_token" value="<?= generateCSRFToken() ?>">
+                        <button type="submit" class="btn btn-danger">Eliminar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Configurar el formulario de eliminación
+            const deleteButtons = document.querySelectorAll('.delete-movimiento');
+            const deleteForm = document.getElementById('deleteMovimientoForm');
+            
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const id = this.dataset.id;
+                    deleteForm.action = `<?= url('movimiento/delete/') ?>${id}`;
+                });
+            });
+
+            // Manejar la respuesta del formulario
+            deleteForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        alert(data.message || 'Error al eliminar el movimiento');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al eliminar el movimiento');
+                });
+            });
+        });
+    </script>
 </div>
 
 <!-- Add Movimiento Modal -->

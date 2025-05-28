@@ -11,7 +11,7 @@
                 </ul>
             </div>
         <?php endif; ?>
-        <form action="<?php echo BASE_URL; ?>/public/index.php?controller=product&action=store" method="POST" class="row g-3">
+        <form action="<?php echo BASE_URL; ?>/public/index.php?controller=product&action=store" method="POST" class="row g-3" enctype="multipart/form-data">
             <div class="col-md-6">
                 <label class="form-label">Nombre</label>
                 <input type="text" name="nombre" class="form-control" value="<?php echo isset($formData['nombre']) ? htmlspecialchars($formData['nombre']) : ''; ?>" required>
@@ -46,6 +46,19 @@
                         </option>
                     <?php endforeach; ?>
                 </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Categoría</label>
+                <select name="categoria" class="form-select" required>
+                    <option value="medicamentos" <?php echo (isset($formData['categoria']) && $formData['categoria'] == 'medicamentos') ? 'selected' : ''; ?>>Medicamentos</option>
+                    <option value="equipamiento" <?php echo (isset($formData['categoria']) && $formData['categoria'] == 'equipamiento') ? 'selected' : ''; ?>>Equipamiento</option>
+                    <option value="suministros" <?php echo (isset($formData['categoria']) && $formData['categoria'] == 'suministros') ? 'selected' : ''; ?>>Suministros</option>
+                </select>
+            </div>
+            <div class="col-12">
+                <label class="form-label">Imagen del Producto</label>
+                <input type="file" class="form-control" name="imagen" accept="image/*">
+                <small class="text-muted">Formatos permitidos: JPG, PNG, GIF. Tamaño máximo: 2MB</small>
             </div>
             <div class="col-12 mt-4">
                 <button type="submit" class="btn btn-success">Crear</button>

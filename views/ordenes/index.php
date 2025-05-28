@@ -77,7 +77,7 @@ ob_start();
                                     <?= $orden['nombre_proveedor'] ?>
                                 </div>
                             </td>
-                            <td><?= date('d/m/Y', strtotime($orden['fecha'])) ?></td>
+                            <td><?= date('d/m/Y', strtotime($orden['fecha_orden'])) ?></td>
                             <td>$<?= number_format($orden['total'], 2) ?></td>
                             <td>
                                 <span class="badge bg-<?= $orden['estado'] === 'completada' ? 'success' : 

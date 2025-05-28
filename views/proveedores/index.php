@@ -113,15 +113,26 @@ ob_start();
                                                         if (data.success) {
                                                             window.location.reload();
                                                         } else {
-                                                            alert('Error al eliminar el proveedor: ' + data.message);
+                                                            Swal.fire({
+                                                                icon: 'error',
+                                                                title: 'Error',
+                                                                text: data.message || 'Error al eliminar el proveedor',
+                                                                confirmButtonText: 'Aceptar'
+                                                            });
                                                         }
                                                     })
                                                     .catch(error => {
                                                         console.error('Error:', error);
-                                                        alert('Error al eliminar el proveedor');
+                                                        Swal.fire({
+                                                            icon: 'error',
+                                                            title: 'Error',
+                                                            text: 'Error al eliminar el proveedor',
+                                                            confirmButtonText: 'Aceptar'
+                                                        });
                                                     });
                                                 }"
-                                                data-bs-toggle="tooltip" title="Eliminar">
+                                                data-bs-toggle="tooltip" 
+                                                title="Eliminar">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
