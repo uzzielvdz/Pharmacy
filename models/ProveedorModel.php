@@ -75,10 +75,41 @@ class ProveedorModel {
     }
 
     public function delete($id) {
-        $query = "DELETE FROM proveedores WHERE id_proveedor = ?";
+        $this->conn->begin_transaction();
+        try {
+            $query = "DELETE FROM proveedores WHERE id_proveedor = ?";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bind_param("i", $id);
+            $result = $stmt->execute();
+            
+            if (!$result || $stmt->affected_rows === 0) {
+                throw new Exception("No se pudo eliminar el proveedor.");
+            }
+            
+            $this->conn->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->conn->rollback();
+            throw $e;
+        }
+    }
+
+    public function getProductosByProveedor($id_proveedor) {
+        $query = "SELECT id_producto FROM productos WHERE id_proveedor = ?";
         $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("i", $id);
-        return $stmt->execute();
+        $stmt->bind_param("i", $id_proveedor);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_all(MYSQLI_ASSOC);
+    }
+
+    public function getOrdenesByProveedor($id_proveedor) {
+        $query = "SELECT id_orden FROM ordenes_compra WHERE id_proveedor = ?";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bind_param("i", $id_proveedor);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_all(MYSQLI_ASSOC);
     }
 
     public function __destruct() {

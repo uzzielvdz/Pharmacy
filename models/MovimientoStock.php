@@ -17,9 +17,10 @@ class MovimientoStock {
     }
 
     public function getAll() {
-        $sql = "SELECT m.id_movimiento, m.id_producto, p.nombre AS producto, m.tipo_movimiento, m.cantidad, m.fecha, m.motivo 
-                FROM MovimientosStock m 
-                JOIN Productos p ON m.id_producto = p.id_producto";
+        $sql = "SELECT m.id_movimiento, m.id_producto, p.nombre AS nombre_producto, m.tipo_movimiento AS tipo, m.cantidad, m.fecha, m.motivo, p.imagen 
+                FROM movimientosstock m 
+                JOIN productos p ON m.id_producto = p.id_producto
+                ORDER BY m.fecha DESC";
         $result = $this->conn->query($sql);
         if (!$result) {
             throw new Exception("E005 Base de Datos: Error al obtener la lista de movimientos.");
@@ -28,9 +29,9 @@ class MovimientoStock {
     }
 
     public function getById($id) {
-        $sql = "SELECT m.*, p.nombre AS producto 
-                FROM MovimientosStock m 
-                JOIN Productos p ON m.id_producto = p.id_producto 
+        $sql = "SELECT m.*, p.nombre AS nombre_producto, m.tipo_movimiento AS tipo 
+                FROM movimientosstock m 
+                JOIN productos p ON m.id_producto = p.id_producto 
                 WHERE m.id_movimiento = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
@@ -196,11 +197,18 @@ class MovimientoStock {
     public function delete($id) {
         $this->conn->begin_transaction();
         try {
+            // Obtener el movimiento actual
             $current = $this->getById($id);
+            if (!$current) {
+                throw new Exception("E003 Movimientos: Movimiento no encontrado.");
+            }
+
+            // Calcular el cambio de stock (invertir el movimiento)
             $stockChange = $current['tipo_movimiento'] === 'entrada' ? -$current['cantidad'] : $current['cantidad'];
 
+            // Verificar si hay suficiente stock para revertir el movimiento
             if ($stockChange < 0) {
-                $sql = "SELECT stock FROM Productos WHERE id_producto = ?";
+                $sql = "SELECT stock FROM productos WHERE id_producto = ?";
                 $stmt = $this->conn->prepare($sql);
                 if (!$stmt) {
                     throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
@@ -209,12 +217,14 @@ class MovimientoStock {
                 $stmt->execute();
                 $result = $stmt->get_result()->fetch_assoc();
                 $stmt->close();
+                
                 if ($result['stock'] < abs($stockChange)) {
                     throw new Exception("E003 Movimientos: No hay suficiente stock para revertir la eliminación. Stock actual: " . $result['stock'] . ".");
                 }
             }
 
-            $sql = "UPDATE Productos SET stock = stock + ? WHERE id_producto = ?";
+            // Actualizar el stock del producto
+            $sql = "UPDATE productos SET stock = stock + ? WHERE id_producto = ?";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
                 throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
@@ -226,7 +236,8 @@ class MovimientoStock {
             }
             $stmt->close();
 
-            $sql = "DELETE FROM MovimientosStock WHERE id_movimiento = ?";
+            // Eliminar el movimiento
+            $sql = "DELETE FROM movimientosstock WHERE id_movimiento = ?";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
                 throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
@@ -255,8 +266,24 @@ class MovimientoStock {
         return $result->fetch_all(MYSQLI_ASSOC);
     }
 
+    public function getMovimientosRecientes() {
+        $sql = "SELECT m.id_movimiento, p.nombre as producto, m.cantidad, 
+                       m.tipo_movimiento, m.fecha, m.motivo
+                FROM movimientosstock m
+                JOIN productos p ON m.id_producto = p.id_producto
+                ORDER BY m.fecha DESC
+                LIMIT 5";
+        $result = $this->conn->query($sql);
+        if (!$result) {
+            throw new Exception("E005 Base de Datos: Error al obtener movimientos recientes.");
+        }
+        return $result->fetch_all(MYSQLI_ASSOC);
+    }
+
     public function __destruct() {
-        $this->conn->close();
+        if ($this->conn) {
+            $this->conn->close();
+        }
     }
 }
 ?>

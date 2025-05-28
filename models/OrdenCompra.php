@@ -13,12 +13,12 @@ class OrdenCompra {
             }
             $this->conn->set_charset("utf8");
         } catch (Exception $e) {
-            throw new Exception("E005 Base de Datos: No se pudo conectar a la base de datos. Por favor, intenta de nuevo.");
+            throw new Exception("E005 Base de Datos: No se pudo conectar a la base de datos.");
         }
     }
 
     public function getAll() {
-        $sql = "SELECT oc.id_orden, oc.fecha_orden, oc.estado, oc.total, p.nombre AS proveedor 
+        $sql = "SELECT oc.id_orden, oc.fecha_orden, oc.estado, oc.total, p.nombre AS nombre_proveedor 
                 FROM OrdenesCompra oc 
                 JOIN Proveedores p ON oc.id_proveedor = p.id_proveedor";
         $result = $this->conn->query($sql);
@@ -201,8 +201,24 @@ class OrdenCompra {
         return $result->fetch_all(MYSQLI_ASSOC);
     }
 
+    public function getOrdenesPendientes() {
+        $sql = "SELECT o.id_orden, p.nombre as proveedor, o.fecha_orden, o.total
+                FROM ordenescompra o
+                JOIN proveedores p ON o.id_proveedor = p.id_proveedor
+                WHERE o.estado = 'pendiente'
+                ORDER BY o.fecha_orden ASC
+                LIMIT 5";
+        $result = $this->conn->query($sql);
+        if (!$result) {
+            throw new Exception("E005 Base de Datos: Error al obtener órdenes pendientes.");
+        }
+        return $result->fetch_all(MYSQLI_ASSOC);
+    }
+
     public function __destruct() {
-        $this->conn->close();
+        if ($this->conn) {
+            $this->conn->close();
+        }
     }
 }
 ?>

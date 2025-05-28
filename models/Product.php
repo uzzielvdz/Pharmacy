@@ -18,8 +18,8 @@ class Product {
 
     public function getAll() {
         $sql = "SELECT p.id_producto, p.nombre, p.descripcion, p.precio, p.fecha_caducidad, p.lote, p.stock, p.categoria, pr.nombre AS proveedor 
-                FROM Productos p 
-                LEFT JOIN Proveedores pr ON p.id_proveedor = pr.id_proveedor";
+                FROM productos p 
+                LEFT JOIN proveedores pr ON p.id_proveedor = pr.id_proveedor";
         $result = $this->conn->query($sql);
         if (!$result) {
             throw new Exception("E005 Base de Datos: Error al obtener la lista de productos.");
@@ -29,8 +29,8 @@ class Product {
 
     public function getById($id) {
         $sql = "SELECT p.id_producto, p.nombre, p.descripcion, p.precio, p.fecha_caducidad, p.lote, p.stock, p.categoria, p.id_proveedor, pr.nombre AS proveedor 
-                FROM Productos p 
-                LEFT JOIN Proveedores pr ON p.id_proveedor = pr.id_proveedor 
+                FROM productos p 
+                LEFT JOIN proveedores pr ON p.id_proveedor = pr.id_proveedor 
                 WHERE p.id_producto = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
@@ -47,7 +47,7 @@ class Product {
     }
 
     public function checkNameExists($nombre, $excludeId = null) {
-        $sql = "SELECT COUNT(*) as count FROM Productos WHERE nombre = ?";
+        $sql = "SELECT COUNT(*) as count FROM productos WHERE nombre = ?";
         if ($excludeId !== null) {
             $sql .= " AND id_producto != ?";
         }
@@ -70,7 +70,7 @@ class Product {
     }
 
     public function checkHasMovements($id) {
-        $sql = "SELECT COUNT(*) as count FROM MovimientosStock WHERE id_producto = ?";
+        $sql = "SELECT COUNT(*) as count FROM movimientosstock WHERE id_producto = ?";
         $stmt = $this->conn->prepare($sql);
         if (!$stmt) {
             throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
@@ -89,14 +89,14 @@ class Product {
         $this->conn->begin_transaction();
         try {
             $this->checkNameExists($data['nombre']);
-            $sql = "INSERT INTO Productos (nombre, descripcion, precio, fecha_caducidad, lote, stock, categoria, id_proveedor) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO productos (nombre, descripcion, precio, fecha_caducidad, lote, stock, categoria, id_proveedor, imagen) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
                 throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
             }
             $stmt->bind_param(
-                "ssdssssi",
+                "ssdssssss",
                 $data['nombre'],
                 $data['descripcion'],
                 $data['precio'],
@@ -104,7 +104,8 @@ class Product {
                 $data['lote'],
                 $data['stock'],
                 $data['categoria'],
-                $data['id_proveedor']
+                $data['id_proveedor'],
+                $data['imagen'] ?? null
             );
             $result = $stmt->execute();
             if (!$result) {
@@ -124,14 +125,19 @@ class Product {
         $this->conn->begin_transaction();
         try {
             $this->checkNameExists($data['nombre'], $id);
-            $sql = "UPDATE Productos SET nombre = ?, descripcion = ?, precio = ?, fecha_caducidad = ?, lote = ?, stock = ?, categoria = ?, id_proveedor = ? 
-                    WHERE id_producto = ?";
-            $stmt = $this->conn->prepare($sql);
-            if (!$stmt) {
-                throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
-            }
-            $stmt->bind_param(
-                "ssdssssii",
+            
+            // Construir la consulta SQL base
+            $sql = "UPDATE productos SET 
+                    nombre = ?, 
+                    descripcion = ?, 
+                    precio = ?, 
+                    fecha_caducidad = ?, 
+                    lote = ?, 
+                    stock = ?, 
+                    categoria = ?, 
+                    id_proveedor = ?";
+            
+            $params = [
                 $data['nombre'],
                 $data['descripcion'],
                 $data['precio'],
@@ -139,13 +145,33 @@ class Product {
                 $data['lote'],
                 $data['stock'],
                 $data['categoria'],
-                $data['id_proveedor'],
-                $id
-            );
-            $result = $stmt->execute();
-            if (!$result || $stmt->affected_rows === 0) {
-                throw new Exception("E001 Productos: No se actualizó ningún producto con ID $id.");
+                $data['id_proveedor']
+            ];
+            $types = "ssdssssi";
+
+            // Agregar imagen si existe
+            if (isset($data['imagen'])) {
+                $sql .= ", imagen = ?";
+                $params[] = $data['imagen'];
+                $types .= "s";
             }
+
+            $sql .= " WHERE id_producto = ?";
+            $params[] = $id;
+            $types .= "i";
+
+            $stmt = $this->conn->prepare($sql);
+            if (!$stmt) {
+                throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
+            }
+
+            $stmt->bind_param($types, ...$params);
+            $result = $stmt->execute();
+            
+            if (!$result) {
+                throw new Exception("E005 Base de Datos: Error al actualizar el producto.");
+            }
+            
             $stmt->close();
             $this->conn->commit();
             return true;
@@ -159,7 +185,7 @@ class Product {
         $this->conn->begin_transaction();
         try {
             $this->checkHasMovements($id);
-            $sql = "DELETE FROM Productos WHERE id_producto = ?";
+            $sql = "DELETE FROM productos WHERE id_producto = ?";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
                 throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
@@ -179,7 +205,7 @@ class Product {
     }
 
     public function getProveedores() {
-        $sql = "SELECT id_proveedor, nombre FROM Proveedores";
+        $sql = "SELECT id_proveedor, nombre FROM proveedores";
         $result = $this->conn->query($sql);
         if (!$result) {
             throw new Exception("E005 Base de Datos: Error al obtener la lista de proveedores.");
