@@ -1,10 +1,13 @@
 RewriteEngine On
 RewriteBase /Pharmacy/
 
-# Si el archivo o directorio no existe, redirigir a index.php
+# Redirigir todas las solicitudes a index.php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ index.php?url=$1 [QSA,L]
+RewriteRule ^(.*)$ index.php [QSA,L]
 
 # Permitir acceso directo a archivos en public/
-RewriteRule ^public/ - [L] 
+RewriteRule ^public/ - [L]
+
+# Redirigir /public/ a la raíz
+RewriteRule ^public/(.*)$ $1 [R=301,L] 

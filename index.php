@@ -5,10 +5,11 @@ $controllers = [
     'product' => __DIR__ . '/controllers/ProductController.php',
     'proveedor' => __DIR__ . '/controllers/ProveedorController.php',
     'movimiento' => __DIR__ . '/controllers/MovimientoStockController.php',
-    'orden' => __DIR__ . '/controllers/OrdenCompraController.php'
+    'orden' => __DIR__ . '/controllers/OrdenCompraController.php',
+    'dashboard' => __DIR__ . '/controllers/DashboardController.php'
 ];
 
-$controller = filter_input(INPUT_GET, 'controller', FILTER_SANITIZE_STRING) ?? 'product';
+$controller = filter_input(INPUT_GET, 'controller', FILTER_SANITIZE_STRING) ?? 'dashboard';
 $action = filter_input(INPUT_GET, 'action', FILTER_SANITIZE_STRING) ?? 'index';
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT) ?? null;
 
@@ -18,7 +19,16 @@ try {
     }
     require_once $controllers[$controller];
 
-    if ($controller === 'product') {
+    if ($controller === 'dashboard') {
+        $controllerInstance = new DashboardController();
+        switch ($action) {
+            case 'index':
+                $controllerInstance->index();
+                break;
+            default:
+                throw new Exception("E007 Sistema: La acción solicitada no es válida.");
+        }
+    } elseif ($controller === 'product') {
         $controllerInstance = new ProductController();
         switch ($action) {
             case 'index':
