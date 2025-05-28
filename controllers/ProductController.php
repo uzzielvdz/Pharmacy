@@ -18,12 +18,14 @@ class ProductController {
     public function index() {
         $errors = [];
         $products = [];
+        $proveedores = [];
         try {
             $products = $this->productModel->getAll();
+            $proveedores = $this->productModel->getProveedores();
         } catch (Exception $e) {
             $errors[] = $e->getMessage();
         }
-        require_once dirname(__DIR__) . '/views/products/index.php';
+        require_once VIEWS_PATH . '/products/index.php';
     }
 
     public function create() {
@@ -35,7 +37,7 @@ class ProductController {
         } catch (Exception $e) {
             $errors[] = $e->getMessage();
         }
-        require_once dirname(__DIR__) . '/views/products/create.php';
+        require_once VIEWS_PATH . '/products/create.php';
     }
 
     public function store() {
@@ -85,8 +87,8 @@ class ProductController {
                 ];
                 $this->movimientoModel->create($movimientoData);
             }
-            header('Location: ' . BASE_URL . '/public/index.php?controller=product&action=index');
-            exit;
+            setFlash('Producto creado exitosamente', 'success');
+            redirect('products');
         } catch (Exception $e) {
             $errors[] = $e->getMessage();
             try {
@@ -94,7 +96,7 @@ class ProductController {
             } catch (Exception $e) {
                 $errors[] = $e->getMessage();
             }
-            require_once dirname(__DIR__) . '/views/products/create.php';
+            require_once VIEWS_PATH . '/products/create.php';
         }
     }
 
@@ -116,84 +118,101 @@ class ProductController {
         } catch (Exception $e) {
             $errors[] = $e->getMessage();
             $products = $this->productModel->getAll();
-            require_once dirname(__DIR__) . '/views/products/index.php';
+            require_once VIEWS_PATH . '/products/index.php';
             return;
         }
-        require_once dirname(__DIR__) . '/views/products/edit.php';
+        require_once VIEWS_PATH . '/products/edit.php';
     }
 
     public function update() {
         $errors = [];
-        $formData = [];
-        $proveedores = [];
         try {
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 throw new Exception("E006 Validación: Por favor, usa el formulario para actualizar el producto.");
             }
 
             $id = filter_var($_POST['id'] ?? 0, FILTER_VALIDATE_INT);
+            if (!$id) {
+                throw new Exception("E006 Validación: ID de producto no válido.");
+            }
+
             $data = [
                 'nombre' => trim($_POST['nombre'] ?? ''),
                 'descripcion' => trim($_POST['descripcion'] ?? ''),
-                'stock' => filter_var($_POST['stock'] ?? 0, FILTER_VALIDATE_INT),
                 'precio' => filter_var($_POST['precio'] ?? 0, FILTER_VALIDATE_FLOAT),
                 'fecha_caducidad' => trim($_POST['fecha_caducidad'] ?? ''),
                 'lote' => trim($_POST['lote'] ?? ''),
+                'stock' => filter_var($_POST['stock'] ?? 0, FILTER_VALIDATE_INT),
+                'categoria' => trim($_POST['categoria'] ?? 'medicamentos'),
                 'id_proveedor' => filter_var($_POST['id_proveedor'] ?? 0, FILTER_VALIDATE_INT)
             ];
-            $formData = $data;
-            $formData['id_producto'] = $id;
 
-            if ($id === false || $id <= 0) {
-                throw new Exception("E006 Validación: El ID de producto no es válido.");
-            }
-            if (empty($data['nombre'])) {
-                throw new Exception("E006 Validación: El nombre del producto es obligatorio.");
-            }
-            if ($data['stock'] === false || $data['stock'] < 0) {
-                throw new Exception("E006 Validación: El stock debe ser un número no negativo.");
-            }
-            if ($data['precio'] === false || $data['precio'] <= 0) {
-                throw new Exception("E006 Validación: El precio debe ser un número positivo.");
-            }
-            if ($data['id_proveedor'] === false || $data['id_proveedor'] <= 0) {
-                throw new Exception("E006 Validación: Por favor, selecciona un proveedor válido.");
-            }
-            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['fecha_caducidad'])) {
-                throw new Exception("E006 Validación: La fecha de caducidad no es válida.");
+            // Manejar la imagen si se subió una nueva
+            if (isset($_FILES['imagen']) && $_FILES['imagen']['error'] === UPLOAD_ERR_OK) {
+                $uploadDir = PUBLIC_PATH . '/img/products/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0777, true);
+                }
+
+                $fileExtension = strtolower(pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION));
+                $newFileName = uniqid() . '.' . $fileExtension;
+                $uploadFile = $uploadDir . $newFileName;
+
+                if (move_uploaded_file($_FILES['imagen']['tmp_name'], $uploadFile)) {
+                    $data['imagen'] = $newFileName;
+                }
             }
 
-            $currentProduct = $this->productModel->getById($id);
-            if (!$currentProduct) {
-                throw new Exception("E001 Productos: Producto no encontrado.");
+            if ($this->productModel->update($id, $data)) {
+                setFlash('success', 'Producto actualizado correctamente');
+            } else {
+                throw new Exception("Error al actualizar el producto.");
             }
-            $stockDifference = $data['stock'] - $currentProduct['stock'];
-            $this->productModel->update($id, $data);
-            if ($stockDifference != 0) {
-                $movimientoData = [
-                    'id_producto' => $id,
-                    'tipo_movimiento' => $stockDifference > 0 ? 'entrada' : 'salida',
-                    'cantidad' => abs($stockDifference),
-                    'fecha' => date('Y-m-d H:i:s'),
-                    'motivo' => 'Ajuste por edición #' . $id
-                ];
-                $this->movimientoModel->create($movimientoData);
-            }
-            header('Location: ' . BASE_URL . '/public/index.php?controller=product&action=index');
-            exit;
         } catch (Exception $e) {
             $errors[] = $e->getMessage();
-            try {
+            if (isset($id)) {
+                $product = $this->productModel->getById($id);
                 $proveedores = $this->productModel->getProveedores();
-            } catch (Exception $e) {
-                $errors[] = $e->getMessage();
+                require_once VIEWS_PATH . '/products/edit.php';
+                return;
             }
-            require_once dirname(__DIR__) . '/views/products/edit.php';
         }
+        redirect('products');
     }
 
     public function delete($id) {
+        try {
+            if (!filter_var($id, FILTER_VALIDATE_INT) || $id <= 0) {
+                throw new Exception("E006 Validación: El ID de producto no es válido.");
+            }
+
+            if ($this->productModel->delete($id)) {
+                if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => true]);
+                    exit;
+                }
+                setFlash('success', 'Producto eliminado exitosamente');
+            } else {
+                throw new Exception("Error al eliminar el producto.");
+            }
+        } catch (Exception $e) {
+            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+                exit;
+            }
+            $errors[] = $e->getMessage();
+            $products = $this->productModel->getAll();
+            require_once VIEWS_PATH . '/products/index.php';
+            return;
+        }
+        redirect('products');
+    }
+
+    public function view($id) {
         $errors = [];
+        $product = null;
         try {
             if (!filter_var($id, FILTER_VALIDATE_INT) || $id <= 0) {
                 throw new Exception("E006 Validación: El ID de producto no es válido.");
@@ -202,24 +221,13 @@ class ProductController {
             if (!$product) {
                 throw new Exception("E001 Productos: Producto no encontrado.");
             }
-            if ($product['stock'] > 0) {
-                $movimientoData = [
-                    'id_producto' => $id,
-                    'tipo_movimiento' => 'salida',
-                    'cantidad' => $product['stock'],
-                    'fecha' => date('Y-m-d H:i:s'),
-                    'motivo' => 'Eliminación de producto #' . $id
-                ];
-                $this->movimientoModel->create($movimientoData);
-            }
-            $this->productModel->delete($id);
-            header('Location: ' . BASE_URL . '/public/index.php?controller=product&action=index');
-            exit;
         } catch (Exception $e) {
             $errors[] = $e->getMessage();
             $products = $this->productModel->getAll();
-            require_once dirname(__DIR__) . '/views/products/index.php';
+            require_once VIEWS_PATH . '/products/index.php';
+            return;
         }
+        require_once VIEWS_PATH . '/products/view.php';
     }
 }
 ?>

@@ -1,20 +1,23 @@
 <?php
 require_once dirname(__DIR__) . '/config/config.php';
-require_once ROOT_PATH . '/config/database.php';
 
 class Product {
     private $conn;
 
     public function __construct() {
         try {
-            $this->conn = getConnection();
+            $this->conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+            if ($this->conn->connect_error) {
+                throw new Exception("Error de conexión: " . $this->conn->connect_error);
+            }
+            $this->conn->set_charset("utf8");
         } catch (Exception $e) {
             throw new Exception("E005 Base de Datos: No se pudo conectar a la base de datos.");
         }
     }
 
     public function getAll() {
-        $sql = "SELECT p.id_producto, p.nombre, p.descripcion, p.precio, p.fecha_caducidad, p.lote, p.stock, pr.nombre AS proveedor 
+        $sql = "SELECT p.id_producto, p.nombre, p.descripcion, p.precio, p.fecha_caducidad, p.lote, p.stock, p.categoria, pr.nombre AS proveedor 
                 FROM Productos p 
                 LEFT JOIN Proveedores pr ON p.id_proveedor = pr.id_proveedor";
         $result = $this->conn->query($sql);
@@ -25,7 +28,7 @@ class Product {
     }
 
     public function getById($id) {
-        $sql = "SELECT p.id_producto, p.nombre, p.descripcion, p.precio, p.fecha_caducidad, p.lote, p.stock, p.id_proveedor, pr.nombre AS proveedor 
+        $sql = "SELECT p.id_producto, p.nombre, p.descripcion, p.precio, p.fecha_caducidad, p.lote, p.stock, p.categoria, p.id_proveedor, pr.nombre AS proveedor 
                 FROM Productos p 
                 LEFT JOIN Proveedores pr ON p.id_proveedor = pr.id_proveedor 
                 WHERE p.id_producto = ?";
@@ -86,20 +89,21 @@ class Product {
         $this->conn->begin_transaction();
         try {
             $this->checkNameExists($data['nombre']);
-            $sql = "INSERT INTO Productos (nombre, descripcion, precio, fecha_caducidad, lote, stock, id_proveedor) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO Productos (nombre, descripcion, precio, fecha_caducidad, lote, stock, categoria, id_proveedor) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
                 throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
             }
             $stmt->bind_param(
-                "ssdssii",
+                "ssdssssi",
                 $data['nombre'],
                 $data['descripcion'],
                 $data['precio'],
                 $data['fecha_caducidad'],
                 $data['lote'],
                 $data['stock'],
+                $data['categoria'],
                 $data['id_proveedor']
             );
             $result = $stmt->execute();
@@ -120,20 +124,21 @@ class Product {
         $this->conn->begin_transaction();
         try {
             $this->checkNameExists($data['nombre'], $id);
-            $sql = "UPDATE Productos SET nombre = ?, descripcion = ?, precio = ?, fecha_caducidad = ?, lote = ?, stock = ?, id_proveedor = ? 
+            $sql = "UPDATE Productos SET nombre = ?, descripcion = ?, precio = ?, fecha_caducidad = ?, lote = ?, stock = ?, categoria = ?, id_proveedor = ? 
                     WHERE id_producto = ?";
             $stmt = $this->conn->prepare($sql);
             if (!$stmt) {
                 throw new Exception("E005 Base de Datos: Error al preparar la consulta.");
             }
             $stmt->bind_param(
-                "ssdssiii",
+                "ssdssssii",
                 $data['nombre'],
                 $data['descripcion'],
                 $data['precio'],
                 $data['fecha_caducidad'],
                 $data['lote'],
                 $data['stock'],
+                $data['categoria'],
                 $data['id_proveedor'],
                 $id
             );

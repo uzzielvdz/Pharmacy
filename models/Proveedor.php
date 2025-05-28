@@ -1,13 +1,16 @@
 <?php
 require_once dirname(__DIR__) . '/config/config.php';
-require_once ROOT_PATH . '/config/database.php';
 
 class Proveedor {
     private $conn;
 
     public function __construct() {
         try {
-            $this->conn = getConnection();
+            $this->conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+            if ($this->conn->connect_error) {
+                throw new Exception("Error de conexión: " . $this->conn->connect_error);
+            }
+            $this->conn->set_charset("utf8");
         } catch (Exception $e) {
             throw new Exception("E005 Base de Datos: No se pudo conectar a la base de datos.");
         }

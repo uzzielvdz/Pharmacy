@@ -1,0 +1,156 @@
+:root {
+    --sidebar-width: 250px;
+    --navbar-height: 60px;
+    --primary-color: #2c3e50;
+    --secondary-color: #34495e;
+    --accent-color: #3498db;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+}
+
+/* Sidebar Styles */
+.sidebar {
+    width: var(--sidebar-width);
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+.sidebar-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-nav .nav-link {
+    padding: 0.8rem 1rem;
+    color: rgba(255, 255, 255, 0.8);
+    transition: all 0.3s ease;
+}
+
+.sidebar-nav .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.sidebar-nav .nav-link i {
+    width: 20px;
+    margin-right: 10px;
+}
+
+/* Main Content Styles */
+.main-content {
+    margin-left: var(--sidebar-width);
+    flex: 1;
+    min-height: 100vh;
+    background-color: #f8f9fa;
+}
+
+/* Navbar Styles */
+.navbar {
+    height: var(--navbar-height);
+    padding: 0 1rem;
+}
+
+.navbar .btn-link {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+/* Card Styles */
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Table Styles */
+.table {
+    background-color: white;
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.table thead th {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+}
+
+/* Form Styles */
+.form-control:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+}
+
+/* Button Styles */
+.btn-primary {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.btn-primary:hover {
+    background-color: #2980b9;
+    border-color: #2980b9;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .sidebar {
+        margin-left: calc(-1 * var(--sidebar-width));
+    }
+    
+    .sidebar.active {
+        margin-left: 0;
+    }
+    
+    .main-content {
+        margin-left: 0;
+    }
+    
+    .main-content.active {
+        margin-left: var(--sidebar-width);
+    }
+}
+
+/* Animation Classes */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--secondary-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color);
+} 

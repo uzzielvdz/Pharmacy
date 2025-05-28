@@ -5,7 +5,11 @@ class OrdenCompraController {
     private $ordenModel;
 
     public function __construct() {
-        $this->ordenModel = new OrdenCompra();
+        try {
+            $this->ordenModel = new OrdenCompra();
+        } catch (Exception $e) {
+            throw new Exception("E005 Base de Datos: No se pudo inicializar el modelo de órdenes.");
+        }
     }
 
     public function index() {
@@ -16,7 +20,7 @@ class OrdenCompraController {
         } catch (Exception $e) {
             $errors[] = $e->getMessage();
         }
-        require_once dirname(__DIR__) . '/views/ordenes/index.php';
+        require_once VIEWS_PATH . '/ordenes/index.php';
     }
 
     public function create() {
@@ -29,7 +33,7 @@ class OrdenCompraController {
         } catch (Exception $e) {
             $errors[] = $e->getMessage();
         }
-        require_once dirname(__DIR__) . '/views/ordenes/create.php';
+        require_once VIEWS_PATH . '/ordenes/create.php';
     }
 
     public function store() {
@@ -75,13 +79,13 @@ class OrdenCompraController {
             }
 
             $this->ordenModel->create($data);
-            header('Location: ' . BASE_URL . '/public/index.php?controller=orden&action=index');
-            exit;
+            setFlash('Orden de compra creada exitosamente', 'success');
+            redirect('orden');
         } catch (Exception $e) {
             $errors[] = $e->getMessage();
             $proveedores = $this->ordenModel->getProveedores();
             $productos = $this->ordenModel->getProductos();
-            require_once dirname(__DIR__) . '/views/ordenes/create.php';
+            require_once VIEWS_PATH . '/ordenes/create.php';
         }
     }
 
@@ -92,12 +96,12 @@ class OrdenCompraController {
                 throw new Exception("E006 Validación: El ID de la orden no es válido.");
             }
             $this->ordenModel->completar($id);
-            header('Location: ' . BASE_URL . '/public/index.php?controller=orden&action=index');
-            exit;
+            setFlash('Orden de compra completada exitosamente', 'success');
+            redirect('orden');
         } catch (Exception $e) {
             $errors[] = $e->getMessage();
             $ordenes = $this->ordenModel->getAll();
-            require_once dirname(__DIR__) . '/views/ordenes/index.php';
+            require_once VIEWS_PATH . '/ordenes/index.php';
         }
     }
 
@@ -108,12 +112,12 @@ class OrdenCompraController {
                 throw new Exception("E006 Validación: El ID de la orden no es válido.");
             }
             $this->ordenModel->cancelar($id);
-            header('Location: ' . BASE_URL . '/public/index.php?controller=orden&action=index');
-            exit;
+            setFlash('Orden de compra cancelada exitosamente', 'success');
+            redirect('orden');
         } catch (Exception $e) {
             $errors[] = $e->getMessage();
             $ordenes = $this->ordenModel->getAll();
-            require_once dirname(__DIR__) . '/views/ordenes/index.php';
+            require_once VIEWS_PATH . '/ordenes/index.php';
         }
     }
 
@@ -124,12 +128,12 @@ class OrdenCompraController {
                 throw new Exception("E006 Validación: El ID de la orden no es válido.");
             }
             $this->ordenModel->delete($id);
-            header('Location: ' . BASE_URL . '/public/index.php?controller=orden&action=index');
-            exit;
+            setFlash('Orden de compra eliminada exitosamente', 'success');
+            redirect('orden');
         } catch (Exception $e) {
             $errors[] = $e->getMessage();
             $ordenes = $this->ordenModel->getAll();
-            require_once dirname(__DIR__) . '/views/ordenes/index.php';
+            require_once VIEWS_PATH . '/ordenes/index.php';
         }
     }
 }

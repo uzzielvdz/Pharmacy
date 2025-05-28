@@ -1,7 +1,5 @@
 <?php
-if (!class_exists('MovimientoStock')) {
-    require_once dirname(__DIR__) . '/models/MovimientoStock.php';
-}
+require_once dirname(__DIR__) . '/models/MovimientoStock.php';
 
 class MovimientoStockController {
     private $movimientoModel;
@@ -22,7 +20,7 @@ class MovimientoStockController {
         } catch (Exception $e) {
             $errors[] = $e->getMessage();
         }
-        require_once dirname(__DIR__) . '/views/movimientos/index.php';
+        require_once VIEWS_PATH . '/movimientos/index.php';
     }
 
     public function create() {
@@ -34,7 +32,7 @@ class MovimientoStockController {
         } catch (Exception $e) {
             $errors[] = $e->getMessage();
         }
-        require_once dirname(__DIR__) . '/views/movimientos/create.php';
+        require_once VIEWS_PATH . '/movimientos/create.php';
     }
 
     public function store() {
@@ -72,8 +70,8 @@ class MovimientoStockController {
             }
 
             $this->movimientoModel->create($data);
-            header('Location: ' . BASE_URL . '/public/index.php?controller=movimiento&action=index');
-            exit;
+            setFlash('Movimiento registrado exitosamente', 'success');
+            redirect('movimiento');
         } catch (Exception $e) {
             $errors[] = $e->getMessage();
             try {
@@ -81,7 +79,7 @@ class MovimientoStockController {
             } catch (Exception $e) {
                 $errors[] = $e->getMessage();
             }
-            require_once dirname(__DIR__) . '/views/movimientos/create.php';
+            require_once VIEWS_PATH . '/movimientos/create.php';
         }
     }
 
@@ -103,10 +101,10 @@ class MovimientoStockController {
         } catch (Exception $e) {
             $errors[] = $e->getMessage();
             $movimientos = $this->movimientoModel->getAll();
-            require_once dirname(__DIR__) . '/views/movimientos/index.php';
+            require_once VIEWS_PATH . '/movimientos/index.php';
             return;
         }
-        require_once dirname(__DIR__) . '/views/movimientos/edit.php';
+        require_once VIEWS_PATH . '/movimientos/edit.php';
     }
 
     public function update() {
@@ -148,8 +146,8 @@ class MovimientoStockController {
             }
 
             $this->movimientoModel->update($id, $data);
-            header('Location: ' . BASE_URL . '/public/index.php?controller=movimiento&action=index');
-            exit;
+            setFlash('Movimiento actualizado exitosamente', 'success');
+            redirect('movimiento');
         } catch (Exception $e) {
             $errors[] = $e->getMessage();
             try {
@@ -157,7 +155,7 @@ class MovimientoStockController {
             } catch (Exception $e) {
                 $errors[] = $e->getMessage();
             }
-            require_once dirname(__DIR__) . '/views/movimientos/edit.php';
+            require_once VIEWS_PATH . '/movimientos/edit.php';
         }
     }
 
@@ -168,12 +166,12 @@ class MovimientoStockController {
                 throw new Exception("E006 Validación: El ID de movimiento no es válido.");
             }
             $this->movimientoModel->delete($id);
-            header('Location: ' . BASE_URL . '/public/index.php?controller=movimiento&action=index');
-            exit;
+            setFlash('Movimiento eliminado exitosamente', 'success');
+            redirect('movimiento');
         } catch (Exception $e) {
             $errors[] = $e->getMessage();
             $movimientos = $this->movimientoModel->getAll();
-            require_once dirname(__DIR__) . '/views/movimientos/index.php';
+            require_once VIEWS_PATH . '/movimientos/index.php';
         }
     }
 }
